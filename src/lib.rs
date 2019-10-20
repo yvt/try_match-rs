@@ -1,4 +1,4 @@
-//! Provides a procedural expression macro `try_match` that performs pattern
+//! Provides an expression macro `try_match` that performs pattern
 //! matching and returns the bound variables via `Ok(_)` iff successful.
 //!
 //! # Examples
@@ -14,7 +14,8 @@
 //! ```
 //!
 //! `=>` and the part that comes after can be omitted (requires `implicit_map`
-//! feature, which is enabled by default):
+//! feature, which is enabled by default; you can disable it to skip the
+//! compilation of the internal procedural macro):
 //!
 //! ```
 //! # use try_match::try_match;

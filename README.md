@@ -2,7 +2,7 @@
 
 [<img src="https://docs.rs/try_match/badge.svg" alt="docs.rs">](https://docs.rs/try_match/)
 
-Provides a procedural expression macro `try_match` that performs pattern
+Provides an expression macro `try_match` that performs pattern
 matching and returns the bound variables via `Ok(_)` iff successful.
 
 ## Examples
@@ -18,7 +18,8 @@ assert_eq!(try_match!(Some(x) = None::<u32> => x), Err(None));
 ```
 
 `=>` and the part that comes after can be omitted (requires `implicit_map`
-feature, which is enabled by default):
+feature, which is enabled by default; you can disable it to skip the
+compilation of the internal procedural macro):
 
 ```rust
 // `()` if there are no bound variables
