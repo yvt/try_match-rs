@@ -3,6 +3,8 @@
 //!
 //! # Examples
 //!
+//! ## Explicit Mapping
+//!
 //! ```
 //! use try_match::try_match;
 //!
@@ -12,6 +14,8 @@
 //! // `None(input)` on failure
 //! assert_eq!(try_match!(Some(x) = None::<u32> => x), Err(None));
 //! ```
+//!
+//! ## Implicit Mapping
 //!
 //! `=>` and the part that comes after can be omitted (requires `implicit_map`
 //! feature, which is enabled by default; you can disable it to skip the
@@ -28,6 +32,27 @@
 //! // An anonymous struct if there are multiple bound variables
 //! let vars = try_match!(Some((a, b)) = Some((12, 34))).unwrap();
 //! assert_eq!((vars.a, vars.b), (12, 34));
+//! ```
+//!
+//! It produces a tuple if you name the bound variables like `_0`, `_1`, `_2`,
+//! ...:
+//!
+//! ```
+//! # use try_match::try_match;
+//! let (a, b) = try_match!(Some((_0, _1)) = Some((12, 34))).unwrap();
+//! assert_eq!((a, b), (12, 34));
+//! ```
+//!
+//! It's an error to specify non-contiguous binding indices:
+//!
+//! ```compile_fail
+//! # use try_match::try_match;
+//! let _ = try_match!(Some((_0, _2)) = Some((12, 34)));
+//! ```
+//!
+//! ```compile_fail
+//! # use try_match::try_match;
+//! let _ = try_match!(Some((_0, _9223372036854775808)) = Some((12, 34)));
 //! ```
 //!
 //! # Restrictions

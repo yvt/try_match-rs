@@ -42,6 +42,13 @@ pub fn collect_captures(input: TokenStream) -> TokenStream {
     let mut idents = Vec::new();
     collect_pat_ident(&pat, &mut idents);
 
+    // Check if bound variables are all like `_0`, `_1`, in which case
+    // collect them in a tuple
+    if let Some(tokens) = check_tuple_captures(&idents) {
+        return tokens.into();
+    }
+
+    // Decide what to do based on the number of bound variables
     let output = match &idents[..] {
         [] => {
             quote! {()}
@@ -100,6 +107,84 @@ pub fn collect_captures(input: TokenStream) -> TokenStream {
     };
 
     TokenStream::from(output)
+}
+
+/// Check if `idents` contains a tuple binding (e.g., `_4`). If it does, returns
+/// a `TokenStream` that collects the bound variables (e.g., `(_0, _1)`).
+fn check_tuple_captures(idents: &Vec<&PatIdent>) -> Option<proc_macro2::TokenStream> {
+    let mut some_tuple_cap = None;
+    let mut some_non_tuple_cap = None;
+
+    let mut indices: Vec<(u128, &Ident)> = idents
+        .iter()
+        .map(|i| {
+            let index = {
+                let text = i.ident.to_string();
+                if text.starts_with("_") {
+                    // assuming the index fits in `u128`...
+                    text[1..].parse().ok()
+                } else {
+                    None
+                }
+            };
+
+            if let Some(index) = index {
+                some_tuple_cap = Some(*i);
+                (index, &i.ident)
+            } else {
+                some_non_tuple_cap = Some(*i);
+                (0 /* dummy */, &i.ident)
+            }
+        })
+        .collect();
+
+    if let (Some(i1), Some(i2)) = (some_tuple_cap, some_non_tuple_cap) {
+        abort!(
+            i1.span(),
+            "can't have both of a tuple binding `{}` and a non-tuple binding \
+             `{}` at the same time",
+            i1.ident,
+            i2.ident
+        );
+    }
+
+    if some_tuple_cap.is_some() {
+        // Create a reverse map from tuple fields to bound variables
+        indices.sort_unstable_by_key(|e| e.0);
+
+        for (&(ind, ref ident), i) in indices.iter().zip(0u128..) {
+            if ind > i {
+                if ind - 1 == i {
+                    abort!(
+                        ident.span(),
+                        "non-contiguous tuple binding: `_{}` is missing",
+                        ind - 1
+                    );
+                } else {
+                    abort!(
+                        ident.span(),
+                        "non-contiguous tuple binding: `_{}` .. `_{}` are missing",
+                        i,
+                        ind - 1
+                    );
+                }
+            } else if ind < i {
+                assert_eq!(i - 1, ind);
+                abort!(
+                    ident.span(),
+                    "duplicate tuple binding: `_{}` is defined for multiple times",
+                    ind
+                );
+            }
+        }
+
+        // `var1`, `var2`, ...
+        let idents: Vec<_> = indices.into_iter().map(|p| p.1).collect();
+
+        Some(quote! { ( #(#idents),* ) })
+    } else {
+        None
+    }
 }
 
 fn collect_pat_ident<'a>(pat: &'a Pat, out: &mut Vec<&'a PatIdent>) {
