@@ -1,0 +1,16 @@
+[package]
+name = "try_match_inner"
+version = "0.1.0"
+authors = ["yvt <i@yvt.jp>"]
+edition = "2018"
+
+[lib]
+path = "src/lib.rs"
+proc-macro = true
+
+[dependencies]
+proc-macro-error = "0.3.1"
+proc-macro-hack = "0.5.11"
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "1", features = ["full"] }

@@ -1,0 +1,16 @@
+[package]
+name = "try_match"
+version = "0.1.0"
+authors = ["yvt <i@yvt.jp>"]
+edition = "2018"
+
+[features]
+default = ["implicit_map", "std"]
+implicit_map = ["try_match_inner"]
+std = []
+
+[dependencies]
+proc-macro-hack = "0.5.11"
+try_match_inner = { version = "0.1.0", path = "inner", optional = true }
+
+[workspace]
