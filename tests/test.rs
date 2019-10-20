@@ -11,6 +11,7 @@ fn input_evaled_only_once() {
     let _ = try_match!(A = input => ()).unwrap();
 }
 
+#[cfg(feature = "implicit_map")]
 #[test]
 fn input_evaled_only_once_implicit_map() {
     #[derive(Debug)]
