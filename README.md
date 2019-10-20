@@ -12,11 +12,17 @@ matching and returns the bound variables via `Ok(_)` iff successful.
 ```rust
 use try_match::try_match;
 
-// The right-hand side of `=>` if successful
-assert_eq!(try_match!(Some(x) = Some(42) => x), Ok(42));
+#[derive(Copy, Clone, Debug, PartialEq)]
+enum Enum<T> { Var1(T), Var2 }
+use Enum::{Var1, Var2};
 
-// `None(input)` on failure
-assert_eq!(try_match!(Some(x) = None::<u32> => x), Err(None));
+// The right-hand side of `=>` if successful
+assert_eq!(try_match!(Var1(x) = Var1(42)    => x),     Ok(42));
+assert_eq!(try_match!(Var2    = Var2::<u32> => "yay"), Ok("yay"));
+
+// `Err(input)` on failure
+assert_eq!(try_match!(Var1(x) = Var2::<u32> => x),     Err(Var2));
+assert_eq!(try_match!(Var2    = Var1(42)    => "yay"), Err(Var1(42)));
 ```
 
 ### Implicit Mapping
@@ -27,13 +33,13 @@ compilation of the internal procedural macro):
 
 ```rust
 // `()` if there are no bound variables
-assert_eq!(try_match!(Some(_) = Some(42)), Ok(()));
+assert_eq!(try_match!(Var1(_) = Var1(42)), Ok(()));
 
 // The bound variable if there is exactly one bound variables
-assert_eq!(try_match!(Some(x) = Some(42)), Ok(42));
+assert_eq!(try_match!(Var1(x) = Var1(42)), Ok(42));
 
 // An anonymous struct if there are multiple bound variables
-let vars = try_match!(Some((a, b)) = Some((12, 34))).unwrap();
+let vars = try_match!(Var1((a, b)) = Var1((12, 34))).unwrap();
 assert_eq!((vars.a, vars.b), (12, 34));
 ```
 
@@ -41,7 +47,7 @@ It produces a tuple if you name the bound variables like `_0`, `_1`, `_2`,
 ...:
 
 ```rust
-let (a, b) = try_match!(Some((_0, _1)) = Some((12, 34))).unwrap();
+let (a, b) = try_match!(Var1((_0, _1)) = Var1((12, 34))).unwrap();
 assert_eq!((a, b), (12, 34));
 ```
 
@@ -49,12 +55,16 @@ It's an error to specify non-contiguous binding indices:
 
 ```compile_fail
 # use try_match::try_match;
-let _ = try_match!(Some((_0, _2)) = Some((12, 34)));
+# #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
+# use Enum::{Var1, Var2};
+let _ = try_match!(Var1((_0, _2)) = Var1((12, 34)));
 ```
 
 ```compile_fail
 # use try_match::try_match;
-let _ = try_match!(Some((_0, _9223372036854775808)) = Some((12, 34)));
+# #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
+# use Enum::{Var1, Var2};
+let _ = try_match!(Var1((_0, _9223372036854775808)) = Var1((12, 34)));
 ```
 
 ## Restrictions
@@ -66,9 +76,9 @@ let _ = try_match!(Some((_0, _9223372036854775808)) = Some((12, 34)));
 [`matches!`] is similar but only returns `bool` indicating whether matching
 was successful or not.
 
-```rust
-let success1 = matches!(Some(42), Some(_));
-let success2 = try_match!(Some(_) = Some(42)).is_ok();
+```no_compile
+let success1 = matches!(Var1(42), Var1(_));
+let success2 = try_match!(Var1(_) = Var1(42)).is_ok();
 ```
 
 [`matches!`]: https://crates.io/crates/matches
