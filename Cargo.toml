@@ -5,6 +5,12 @@ authors = ["yvt <i@yvt.jp>"]
 edition = "2018"
 license = "MIT/Apache-2.0"
 readme = "README.md"
+repository = "https://github.com/yvt/try_match-rs"
+description = """
+Attempt pattern matching and get the result in `Result`.
+"""
+keywords = ["match", "pattern", "macro"]
+categories = ["rust-patterns", "no-std"]
 
 [features]
 default = ["implicit_map", "std"]

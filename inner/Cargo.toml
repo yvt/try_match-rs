@@ -3,6 +3,10 @@ name = "try_match_inner"
 version = "0.1.0"
 authors = ["yvt <i@yvt.jp>"]
 edition = "2018"
+repository = "https://github.com/yvt/try_match-rs"
+description = """
+The internal procedural macro of `try_match`
+"""
 
 [lib]
 path = "src/lib.rs"
