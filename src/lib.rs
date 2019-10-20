@@ -59,6 +59,18 @@
 //!
 //!  - Macros cannot be used in a supplied pattern.
 //!
+//! # Related Work: `matches`
+//!
+//! [`matches!`] is similar but only returns `bool` indicating whether matching
+//! was successful or not.
+//!
+//! ```no_compile
+//! let success1 = matches!(Some(42), Some(_));
+//! let success2 = try_match!(Some(_) = Some(42)).is_ok();
+//! ```
+//!
+//! [`matches!`]: https://crates.io/crates/matches
+//!
 #![no_std]
 
 /// Try to match `$in` against a given pattern `$p`. Produces `Ok($out)` if
