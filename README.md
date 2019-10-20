@@ -53,17 +53,11 @@ assert_eq!((a, b), (12, 34));
 
 It's an error to specify non-contiguous binding indices:
 
-```compile_fail
-# use try_match::try_match;
-# #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
-# use Enum::{Var1, Var2};
+```rust
 let _ = try_match!(Var1((_0, _2)) = Var1((12, 34)));
 ```
 
-```compile_fail
-# use try_match::try_match;
-# #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
-# use Enum::{Var1, Var2};
+```rust
 let _ = try_match!(Var1((_0, _9223372036854775808)) = Var1((12, 34)));
 ```
 
@@ -76,7 +70,7 @@ let _ = try_match!(Var1((_0, _9223372036854775808)) = Var1((12, 34)));
 [`matches!`] is similar but only returns `bool` indicating whether matching
 was successful or not.
 
-```no_compile
+```rust
 let success1 = matches!(Var1(42), Var1(_));
 let success2 = try_match!(Var1(_) = Var1(42)).is_ok();
 ```
