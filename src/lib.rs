@@ -105,17 +105,15 @@
 #[macro_export]
 macro_rules! try_match {
     ($p:pat = $in:expr) => {
-        if let $p = $in {
-            ::core::result::Result::Ok($crate::collect_captures_outer!($p))
-        } else {
-            ::core::result::Result::Err($in)
+        match $in {
+            $p => ::core::result::Result::Ok($crate::collect_captures_outer!($p)),
+            in_value => ::core::result::Result::Err(in_value),
         }
     };
     ($p:pat = $in:expr => $out:expr) => {
-        if let $p = $in {
-            ::core::result::Result::Ok($out)
-        } else {
-            ::core::result::Result::Err($in)
+        match $in {
+            $p => ::core::result::Result::Ok($out),
+            in_value => ::core::result::Result::Err(in_value),
         }
     };
 }
