@@ -35,7 +35,7 @@ compilation of the internal procedural macro):
 // `()` if there are no bound variables
 assert_eq!(try_match!(Var1(_) = Var1(42)), Ok(()));
 
-// The bound variable if there is exactly one bound variables
+// The bound variable if there is exactly one bound variable
 assert_eq!(try_match!(Var1(x) = Var1(42)), Ok(42));
 
 // An anonymous struct if there are multiple bound variables
