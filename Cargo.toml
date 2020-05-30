@@ -19,6 +19,6 @@ std = []
 
 [dependencies]
 proc-macro-hack = { version = "0.5.11", optional = true }
-try_match_inner = { version = "0.1.0", path = "inner", optional = true }
+try_match_inner = { version = "0.2.0", path = "inner", optional = true }
 
 [workspace]
