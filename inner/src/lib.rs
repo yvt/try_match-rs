@@ -8,18 +8,21 @@ use syn::{
     parse::{Parse, ParseStream},
     parse_macro_input,
     spanned::Spanned,
-    Error, Ident, LitStr, Pat, PatIdent, Result,
+    Error, Expr, Ident, LitStr, Pat, PatIdent, Result, Token,
 };
 
 struct MacroInput {
     use_std: bool,
     pat: Pat,
+    in_value: Expr,
 }
 
 impl Parse for MacroInput {
     fn parse(input: ParseStream) -> Result<Self> {
         let std_mode: Ident = input.parse()?;
         let pat = input.parse()?;
+        input.parse::<Token![=]>()?;
+        let in_value = input.parse()?;
 
         Ok(Self {
             use_std: if std_mode == "std" {
@@ -30,79 +33,92 @@ impl Parse for MacroInput {
                 return Err(Error::new_spanned(std_mode, ""));
             },
             pat,
+            in_value,
         })
     }
 }
 
 #[proc_macro_hack::proc_macro_hack]
 #[proc_macro_error::proc_macro_error]
-pub fn collect_captures(input: TokenStream) -> TokenStream {
-    let MacroInput { use_std, pat } = parse_macro_input!(input);
+pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
+    let MacroInput {
+        use_std,
+        pat,
+        in_value,
+    } = parse_macro_input!(input);
 
     let mut idents = Vec::new();
     collect_pat_ident(&pat, &mut idents);
 
-    // Check if bound variables are all like `_0`, `_1`, in which case
-    // collect them in a tuple
-    if let Some(tokens) = check_tuple_captures(&idents) {
-        return tokens.into();
-    }
+    let success_output =
+        // Check if bound variables are all like `_0`, `_1`, in which case
+        // collect them in a tuple
+        if let Some(tokens) = check_tuple_captures(&idents) {
+            tokens
+        } else {
+            // Decide what to do based on the number of bound variables
+            match &idents[..] {
+                [] => {
+                    quote! {()}
+                }
+                [single] => {
+                    quote! {#single}
+                }
+                multi => {
+                    // `var1`, `var2`, ...
+                    let idents: Vec<_> = multi.iter().map(|p| p.ident.clone()).collect();
 
-    // Decide what to do based on the number of bound variables
-    let output = match &idents[..] {
-        [] => {
-            quote! {()}
-        }
-        [single] => {
-            quote! {#single}
-        }
-        multi => {
-            // `var1`, `var2`, ...
-            let idents: Vec<_> = multi.iter().map(|p| p.ident.clone()).collect();
+                    // `_M_0`, `_M_1`, ...
+                    let ty_params: Vec<_> = (0..idents.len())
+                        .map(|i| Ident::new(&format!("_M_{}", i), Span::call_site()))
+                        .collect();
 
-            // `_M_0`, `_M_1`, ...
-            let ty_params: Vec<_> = (0..idents.len())
-                .map(|i| Ident::new(&format!("_M_{}", i), Span::call_site()))
-                .collect();
+                    // `"var1"`, `"var2"`, ...
+                    let ident_strs: Vec<_> = idents
+                        .iter()
+                        .map(|i| LitStr::new(&format!("{}", i), i.span()))
+                        .collect();
 
-            // `"var1"`, `"var2"`, ...
-            let ident_strs: Vec<_> = idents
-                .iter()
-                .map(|i| LitStr::new(&format!("{}", i), i.span()))
-                .collect();
+                    let ty_name = Ident::new("__Match", Span::call_site());
 
-            let ty_name = Ident::new("__Match", Span::call_site());
-
-            let debug_impl = if use_std {
-                let fmt = quote! { ::std::fmt };
-                quote! {
-                    impl<#(#ty_params),*> #fmt::Debug for #ty_name<#(#ty_params),*>
-                    where
-                        #(#ty_params: #fmt::Debug),*
-                    {
-                        fn fmt(&self, f: &mut #fmt::Formatter<'_>) -> #fmt::Result {
-                            f.debug_struct("<anonymous>")
-                                #(.field(#ident_strs, &self.#idents))*
-                                .finish()
+                    let debug_impl = if use_std {
+                        let fmt = quote! { ::std::fmt };
+                        quote! {
+                            impl<#(#ty_params),*> #fmt::Debug for #ty_name<#(#ty_params),*>
+                            where
+                                #(#ty_params: #fmt::Debug),*
+                            {
+                                fn fmt(&self, f: &mut #fmt::Formatter<'_>) -> #fmt::Result {
+                                    f.debug_struct("<anonymous>")
+                                        #(.field(#ident_strs, &self.#idents))*
+                                        .finish()
+                                }
+                            }
                         }
-                    }
+                    } else {
+                        quote! {}
+                    };
+
+                    quote! {{
+                        #[derive(Clone, Copy)]
+                        struct #ty_name<#(#ty_params),*> {
+                            #(
+                                #idents: #ty_params
+                            ),*
+                        }
+
+                        #debug_impl
+
+                        #ty_name { #(#idents),* }
+                    }}
                 }
-            } else {
-                quote! {}
-            };
+            }
+        };
 
-            quote! {{
-                #[derive(Clone, Copy)]
-                struct #ty_name<#(#ty_params),*> {
-                    #(
-                        #idents: #ty_params
-                    ),*
-                }
-
-                #debug_impl
-
-                #ty_name { #(#idents),* }
-            }}
+    let output = quote! {
+        match #in_value {
+            #pat => ::core::result::Result::Ok(#success_output),
+            in_value => ::core::result::Result::Err(in_value),
         }
     };
 

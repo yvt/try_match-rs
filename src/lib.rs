@@ -104,52 +104,45 @@
 /// See [the crate-level documentation](index.html) for examples.
 #[macro_export]
 macro_rules! try_match {
-    ($p:pat = $in:expr) => {
-        match $in {
-            $p => ::core::result::Result::Ok($crate::collect_captures_outer!($p)),
-            in_value => ::core::result::Result::Err(in_value),
-        }
-    };
     ($p:pat = $in:expr => $out:expr) => {
         match $in {
             $p => ::core::result::Result::Ok($out),
             in_value => ::core::result::Result::Err(in_value),
         }
     };
+
+    // Using `$($in:tt)*` in place of `$in:expr` is a work-around for
+    // <https://github.com/dtolnay/proc-macro-hack/issues/46>, which is
+    // originally caused by <https://github.com/rust-lang/rust/issues/43081>
+    ($p:pat = $($in:tt)*) => {
+        // `$p` needs to be parenthesized for it to work on nightly-2020-05-30
+        // and syn 1.0.29
+        $crate::implicit_try_match!(($p) = $($in)*)
+    };
 }
 
-/// Given a pattern, creates an expression that includes bound variables.
-///
-/// - If there are no bound variables, it generates `()`.
-/// - If there is exactly one bound variables `var`, it generates `var`.
-/// - If there are multiple bound variables `var1, var2, ...`, it generates
-///   `SomeType { var1, var2 }`.
-///
-#[cfg(feature = "std")]
-#[doc(hidden)]
+#[cfg(all(feature = "std", feature = "implicit_map"))]
 #[macro_export]
-macro_rules! collect_captures_outer {
-    ($p:pat) => { $crate::collect_captures!(std $p) };
+#[doc(hidden)]
+macro_rules! implicit_try_match {
+    ($p:pat = $($in:tt)*) => {
+        // `$p` needs to be parenthesized for it to work on nightly-2020-05-30
+        // and syn 1.0.29
+        $crate::implicit_try_match_inner!(std($p) = $($in)*)
+    };
 }
 
-#[cfg(not(feature = "std"))]
-#[doc(hidden)]
+#[cfg(all(not(feature = "std"), feature = "implicit_map"))]
 #[macro_export]
-macro_rules! collect_captures_outer {
-    ($p:pat) => { $crate::collect_captures!(no_std $p) };
-}
-
-/// `#[proc_macro_hack]` makes it possible to use this procedural macro in
-/// expression position without relying on an unstable rustc feature, but with
-/// some restrictions. See `proc_macro_hack`'s documentation for more.
-#[cfg(feature = "implicit_map")]
-#[proc_macro_hack::proc_macro_hack]
 #[doc(hidden)]
-pub use try_match_inner::collect_captures;
+macro_rules! implicit_try_match {
+    ($p:pat = $($in:tt)*) => {
+        $crate::implicit_try_match_inner!(no_std($p) = $($in)*)
+    };
+}
 
 #[cfg(not(feature = "implicit_map"))]
-#[macro_export]
-macro_rules! collect_captures {
+macro_rules! implicit_try_match {
     ($p:pat) => {
         compile_error!(
             "can't use the implicit mapping form of `try_match!` because \
@@ -157,3 +150,23 @@ macro_rules! collect_captures {
         )
     };
 }
+
+/// Pattern: `(std|no_std) $p:pat`
+///
+/// The produced expression evaluates to `Ok(_)` using bound variables on a
+/// successful match on the given value.
+///
+/// - If there are no bound variables, it generates `()`.
+/// - If there is exactly one bound variables `var`, it generates `var`.
+/// - If there are multiple bound variables `var1, var2, ...`, it generates
+///   `SomeType { var1, var2 }`.
+///
+/// Otherwise, the expression evaluates to `Err($in)`.
+///
+/// `#[proc_macro_hack]` makes it possible to use this procedural macro in
+/// expression position without relying on an unstable rustc feature, but with
+/// some restrictions. See `proc_macro_hack`'s documentation for more.
+#[cfg(feature = "implicit_map")]
+#[proc_macro_hack::proc_macro_hack]
+#[doc(hidden)]
+pub use try_match_inner::implicit_try_match_inner;
