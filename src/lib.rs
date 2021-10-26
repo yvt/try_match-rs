@@ -137,6 +137,8 @@ macro_rules! implicit_try_match {
 }
 
 #[cfg(not(feature = "implicit_map"))]
+#[macro_export]
+#[doc(hidden)]
 macro_rules! implicit_try_match {
     ($($_:tt)*) => {
         compile_error!(
