@@ -96,7 +96,7 @@
 /// bound variables in `$p`:
 ///
 /// - If there are no bound variables, it is implied to be `()`.
-/// - If there is exactly one bound variables `var`, it is implied to be `var`.
+/// - If there is exactly one bound variable `var`, it is implied to be `var`.
 /// - If there are multiple bound variables `var1, var2, ...`, it is implied to
 ///   be `AnonymousType { var1, var2 }`.
 ///
