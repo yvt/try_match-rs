@@ -129,7 +129,7 @@ macro_rules! implicit_try_match {
     (($($p:tt)*) = $($in:tt)*) => {
         // `$p` needs to be parenthesized for it to work on nightly-2020-05-30
         // and syn 1.0.29
-        $crate::implicit_try_match_inner!(($($p)*) = $($in)*)
+        $crate::implicit_try_match_inner!($($p)* = $($in)*)
     };
 }
 

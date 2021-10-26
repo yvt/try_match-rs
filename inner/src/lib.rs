@@ -18,12 +18,35 @@ struct MacroInput {
 
 impl Parse for MacroInput {
     fn parse(input: ParseStream) -> Result<Self> {
-        let pat = input.parse()?;
+        let pat = input.call(multi_pat_with_leading_vert)?;
         input.parse::<Token![=]>()?;
         let in_value = input.parse()?;
 
         Ok(Self { pat, in_value })
     }
+}
+
+fn multi_pat_with_leading_vert(input: ParseStream) -> Result<Pat> {
+    let leading_vert: Option<Token![|]> = input.parse()?;
+    let mut pat: Pat = input.parse()?;
+    if leading_vert.is_some()
+        || input.peek(Token![|]) && !input.peek(Token![||]) && !input.peek(Token![|=])
+    {
+        let mut cases = syn::punctuated::Punctuated::new();
+        cases.push_value(pat);
+        while input.peek(Token![|]) && !input.peek(Token![||]) && !input.peek(Token![|=]) {
+            let punct = input.parse()?;
+            cases.push_punct(punct);
+            let pat: Pat = input.parse()?;
+            cases.push_value(pat);
+        }
+        pat = Pat::Or(syn::PatOr {
+            attrs: Vec::new(),
+            leading_vert,
+            cases,
+        });
+    }
+    Ok(pat)
 }
 
 #[proc_macro_hack::proc_macro_hack]
