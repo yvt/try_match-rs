@@ -65,14 +65,15 @@ let _ = try_match!(Var1((_0, _9223372036854775808)) = Var1((12, 34)));
 
  - Macros cannot be used in a supplied pattern.
 
-## Related Work: `matches`
+## Related Work
 
-[`matches!`] is similar but only returns `bool` indicating whether matching
-was successful or not.
+[`matches!`][] (now incorporated into the standard library as
+`core::matches!`) is similar but only returns `bool` indicating whether
+matching was successful or not.
 
 ```rust
-let success1 = matches!(Var1(42), Var1(_));
-let success2 = try_match!(Var1(_) = Var1(42)).is_ok();
+let success1 = matches!(Some(42), Some(_));
+let success2 = try_match!(Some(_) = Some(42)).is_ok();
 ```
 
 [`matches!`]: https://crates.io/crates/matches
