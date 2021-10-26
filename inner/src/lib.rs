@@ -135,7 +135,8 @@ pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
 
 /// Check if `idents` contains a tuple binding (e.g., `_4`). If it does, returns
 /// a `TokenStream` that collects the bound variables (e.g., `(_0, _1)`).
-fn check_tuple_captures(idents: &Vec<&PatIdent>) -> Option<proc_macro2::TokenStream> {
+#[allow(clippy::manual_strip)] // `strip_prefix` is only available in Rust ≥ 1.45
+fn check_tuple_captures(idents: &[&PatIdent]) -> Option<proc_macro2::TokenStream> {
     let mut some_tuple_cap = None;
     let mut some_non_tuple_cap = None;
 
@@ -217,14 +218,14 @@ fn collect_pat_ident<'a>(pat: &'a Pat, out: &mut Vec<&'a PatIdent>) {
         Pat::Ident(pat) => {
             out.push(pat);
             if let Some((_, subpat)) = &pat.subpat {
-                collect_pat_ident(&subpat, out);
+                collect_pat_ident(subpat, out);
             }
         }
         Pat::Lit(_) => {}
         Pat::Macro(_) => {}
         Pat::Or(pat) => {
             for case in pat.cases.iter() {
-                collect_pat_ident(&case, out);
+                collect_pat_ident(case, out);
             }
         }
         Pat::Path(_) => {}
@@ -233,7 +234,7 @@ fn collect_pat_ident<'a>(pat: &'a Pat, out: &mut Vec<&'a PatIdent>) {
         Pat::Rest(_) => {}
         Pat::Slice(pat) => {
             for elem in pat.elems.iter() {
-                collect_pat_ident(&elem, out);
+                collect_pat_ident(elem, out);
             }
         }
         Pat::Struct(pat) => {
@@ -243,17 +244,17 @@ fn collect_pat_ident<'a>(pat: &'a Pat, out: &mut Vec<&'a PatIdent>) {
         }
         Pat::Tuple(pat) => {
             for elem in pat.elems.iter() {
-                collect_pat_ident(&elem, out);
+                collect_pat_ident(elem, out);
             }
         }
         Pat::TupleStruct(pat) => {
             for elem in pat.pat.elems.iter() {
-                collect_pat_ident(&elem, out);
+                collect_pat_ident(elem, out);
             }
         }
         Pat::Type(pat) => collect_pat_ident(&pat.pat, out),
         Pat::Wild(_) => {}
         // `Pat` can't be covered exhaustively
-        Pat::Verbatim(_) | _ => abort!(pat.span(), "unsupported pattern"),
+        _ => abort!(pat.span(), "unsupported pattern"),
     }
 }
