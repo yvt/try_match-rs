@@ -104,9 +104,9 @@
 /// See [the crate-level documentation](index.html) for examples.
 #[macro_export]
 macro_rules! try_match {
-    ($p:pat = $in:expr => $out:expr) => {
+    ($(|)? $($p:pat)|+ = $in:expr => $out:expr) => {
         match $in {
-            $p => ::core::result::Result::Ok($out),
+            $($p)|+ => ::core::result::Result::Ok($out),
             in_value => ::core::result::Result::Err(in_value),
         }
     };
@@ -114,10 +114,10 @@ macro_rules! try_match {
     // Using `$($in:tt)*` in place of `$in:expr` is a work-around for
     // <https://github.com/dtolnay/proc-macro-hack/issues/46>, which is
     // originally caused by <https://github.com/rust-lang/rust/issues/43081>
-    ($p:pat = $($in:tt)*) => {
+    ($(|)? $($p:pat)|+ = $($in:tt)*) => {
         // `$p` needs to be parenthesized for it to work on nightly-2020-05-30
         // and syn 1.0.29
-        $crate::implicit_try_match!(($p) = $($in)*)
+        $crate::implicit_try_match!(($($p)|+) = $($in)*)
     };
 }
 
@@ -125,10 +125,10 @@ macro_rules! try_match {
 #[macro_export]
 #[doc(hidden)]
 macro_rules! implicit_try_match {
-    ($p:pat = $($in:tt)*) => {
+    (($($p:tt)*) = $($in:tt)*) => {
         // `$p` needs to be parenthesized for it to work on nightly-2020-05-30
         // and syn 1.0.29
-        $crate::implicit_try_match_inner!(std($p) = $($in)*)
+        $crate::implicit_try_match_inner!(std($($p)*) = $($in)*)
     };
 }
 
@@ -136,14 +136,14 @@ macro_rules! implicit_try_match {
 #[macro_export]
 #[doc(hidden)]
 macro_rules! implicit_try_match {
-    ($p:pat = $($in:tt)*) => {
-        $crate::implicit_try_match_inner!(no_std($p) = $($in)*)
+    (($($p:tt)*) = $($in:tt)*) => {
+        $crate::implicit_try_match_inner!(no_std($($p)*) = $($in)*)
     };
 }
 
 #[cfg(not(feature = "implicit_map"))]
 macro_rules! implicit_try_match {
-    ($p:pat) => {
+    ($($_:tt)*) => {
         compile_error!(
             "can't use the implicit mapping form of `try_match!` because \
              the feature `implicit_map` is disabled"

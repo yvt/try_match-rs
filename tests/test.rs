@@ -48,3 +48,13 @@ enum MyOption {
     Some(u32),
     None,
 }
+
+#[cfg(feature = "implicit_map")]
+#[test]
+fn unwrap_result() {
+    assert_eq!(try_match!(Ok(a) | Err(a) = Ok(42)), Ok(42));
+    assert_eq!(try_match!(Ok(a) | Err(a) = Err(42)), Ok(42));
+
+    assert_eq!(try_match!(Ok(_0) | Err(&_0) = Ok::<_, &_>(42)), Ok(42));
+    assert_eq!(try_match!(Ok(&_0) | Err(_0) = Err::<&_, _>(42)), Ok(42));
+}
