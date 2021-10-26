@@ -1,3 +1,5 @@
+extern crate core as abcdefgh;
+extern crate std as ijklmn;
 use try_match::try_match;
 
 #[test]

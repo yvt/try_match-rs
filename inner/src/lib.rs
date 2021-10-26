@@ -8,44 +8,28 @@ use syn::{
     parse::{Parse, ParseStream},
     parse_macro_input,
     spanned::Spanned,
-    Error, Expr, Ident, LitStr, Pat, PatIdent, Result, Token,
+    Expr, Ident, LitStr, Pat, PatIdent, Result, Token,
 };
 
 struct MacroInput {
-    use_std: bool,
     pat: Pat,
     in_value: Expr,
 }
 
 impl Parse for MacroInput {
     fn parse(input: ParseStream) -> Result<Self> {
-        let std_mode: Ident = input.parse()?;
         let pat = input.parse()?;
         input.parse::<Token![=]>()?;
         let in_value = input.parse()?;
 
-        Ok(Self {
-            use_std: if std_mode == "std" {
-                true
-            } else if std_mode == "no_std" {
-                false
-            } else {
-                return Err(Error::new_spanned(std_mode, ""));
-            },
-            pat,
-            in_value,
-        })
+        Ok(Self { pat, in_value })
     }
 }
 
 #[proc_macro_hack::proc_macro_hack]
 #[proc_macro_error::proc_macro_error]
 pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
-    let MacroInput {
-        use_std,
-        pat,
-        in_value,
-    } = parse_macro_input!(input);
+    let MacroInput { pat, in_value } = parse_macro_input!(input);
 
     let mut idents = Vec::new();
     collect_pat_ident(&pat, &mut idents);
@@ -84,8 +68,8 @@ pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
 
                     let ty_name = Ident::new("__Match", Span::call_site());
 
-                    let debug_impl = if use_std {
-                        let fmt = quote! { ::std::fmt };
+                    let debug_impl = {
+                        let fmt = quote! { ::core::fmt };
                         quote! {
                             impl<#(#ty_params),*> #fmt::Debug for #ty_name<#(#ty_params),*>
                             where
@@ -98,8 +82,6 @@ pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
                                 }
                             }
                         }
-                    } else {
-                        quote! {}
                     };
 
                     quote! {{

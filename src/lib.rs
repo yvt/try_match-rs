@@ -100,8 +100,7 @@
 /// - If there are multiple bound variables `var1, var2, ...`, it is implied to
 ///   be `AnonymousType { var1, var2 }`.
 ///
-/// `AnonymousType` derives `Clone` and `Copy`, and `Debug` if `std` feature is
-/// enabled.
+/// `AnonymousType` implements `Clone`, `Copy`, and `Debug`.
 ///
 /// See [the crate-level documentation](index.html) for examples.
 #[macro_export]
@@ -123,23 +122,14 @@ macro_rules! try_match {
     };
 }
 
-#[cfg(all(feature = "std", feature = "implicit_map"))]
+#[cfg(feature = "implicit_map")]
 #[macro_export]
 #[doc(hidden)]
 macro_rules! implicit_try_match {
     (($($p:tt)*) = $($in:tt)*) => {
         // `$p` needs to be parenthesized for it to work on nightly-2020-05-30
         // and syn 1.0.29
-        $crate::implicit_try_match_inner!(std($($p)*) = $($in)*)
-    };
-}
-
-#[cfg(all(not(feature = "std"), feature = "implicit_map"))]
-#[macro_export]
-#[doc(hidden)]
-macro_rules! implicit_try_match {
-    (($($p:tt)*) = $($in:tt)*) => {
-        $crate::implicit_try_match_inner!(no_std($($p)*) = $($in)*)
+        $crate::implicit_try_match_inner!(($($p)*) = $($in)*)
     };
 }
 
@@ -153,7 +143,7 @@ macro_rules! implicit_try_match {
     };
 }
 
-/// Pattern: `(std|no_std) $p:pat`
+/// Pattern: `$p:pat`
 ///
 /// The produced expression evaluates to `Ok(_)` using bound variables on a
 /// successful match on the given value.
