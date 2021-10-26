@@ -1,0 +1,58 @@
+on: [push, pull_request]
+
+name: CI
+
+jobs:
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-20.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          components: clippy
+      - name: cargo clippy
+        uses: actions-rs/clippy-check@v1.0.7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  test:
+    name: Test
+    runs-on: ubuntu-20.04
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        toolchain:
+          - "1.34.2"
+          - "1.49.0"
+          - "1.56.0"
+        features:
+          - ""
+          - "implicit_map"
+
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.toolchain }}
+
+      - name: Skip doctests if not fully-featured
+        if: ${{ matrix.features != 'implicit_map' }}
+        run: echo "test_param=--lib" >> $GITHUB_ENV
+
+      - name: cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: -p try_match ${{ env.target_param }} --no-default-features --features "${{ matrix.features }}"
+
+      - name: cargo test
+        uses: actions-rs/cargo@v1
+        if: ${{ matrix.target == '' }}
+        with:
+          command: test
+          args: -p try_match ${{ env.target_param }} --no-default-features --features "${{ matrix.features }}" ${{ env.test_param }}
