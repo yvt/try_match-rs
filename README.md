@@ -72,7 +72,9 @@ let _ = try_match!(Var1((_0, _9223372036854775808)) = Var1((12, 34)));
 matching was successful or not.
 
 ```rust
-let success1 = matches!(Some(42), Some(_));
+if_rust_version! { >= 1.42 {
+    let success1 = matches!(Some(42), Some(_));
+} }
 let success2 = try_match!(Some(_) = Some(42)).is_ok();
 ```
 

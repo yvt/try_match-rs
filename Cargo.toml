@@ -21,4 +21,7 @@ std = []
 proc-macro-hack = { version = "0.5.11", optional = true }
 try_match_inner = { version = "= 0.3.0", path = "inner", optional = true }
 
+[dev-dependencies]
+if_rust_version = "1.0.0"
+
 [workspace]

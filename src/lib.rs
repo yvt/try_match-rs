@@ -81,7 +81,10 @@
 //!
 //! ```
 //! # use try_match::try_match;
-//! let success1 = matches!(Some(42), Some(_));
+//! # use if_rust_version::if_rust_version;
+//! if_rust_version! { >= 1.42 {
+//!     let success1 = matches!(Some(42), Some(_));
+//! } }
 //! let success2 = try_match!(Some(_) = Some(42)).is_ok();
 //! ```
 //!
