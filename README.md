@@ -69,7 +69,8 @@ let _ = try_match!(Var1((_0, _9223372036854775808)) = Var1((12, 34)));
 
 [`matches!`][] (now incorporated into the standard library as
 `core::matches!`) is similar but only returns `bool` indicating whether
-matching was successful or not.
+matching was successful or not. It uses the syntax
+`matches!(expr, pattern)`.
 
 ```rust
 if_rust_version! { >= 1.42 {
@@ -78,7 +79,16 @@ if_rust_version! { >= 1.42 {
 let success2 = try_match!(Some(_) = Some(42)).is_ok();
 ```
 
+[`bind_match::bind_match!`][] uses a different syntax
+`bind_match!(input_expr, pattern => binding_expr)` (essentially an extension
+of `matches!`) and returns `Some(expr)` on success.
+
+[`extract::extract!`][] uses a similar syntax to `bind_match!` and returns
+`Some(expr)` on success.
+
 [`matches!`]: https://crates.io/crates/matches
+[`bind_match::bind_match!`]: https://crates.io/crates/bind_match
+[`extract::extract!`]: https://crates.io/crates/extract_macro
 
 
 License: MIT/Apache-2.0

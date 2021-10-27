@@ -77,7 +77,8 @@
 //!
 //! [`matches!`][] (now incorporated into the standard library as
 //! [`core::matches!`][]) is similar but only returns `bool` indicating whether
-//! matching was successful or not.
+//! matching was successful or not. It uses the syntax
+//! `matches!(expr, pattern)`.
 //!
 //! ```
 //! # use try_match::try_match;
@@ -88,7 +89,16 @@
 //! let success2 = try_match!(Some(_) = Some(42)).is_ok();
 //! ```
 //!
+//! [`bind_match::bind_match!`][] uses a different syntax
+//! `bind_match!(input_expr, pattern => binding_expr)` (essentially an extension
+//! of `matches!`) and returns `Some(expr)` on success.
+//!
+//! [`extract::extract!`][] uses a similar syntax to `bind_match!` and returns
+//! `Some(expr)` on success.
+//!
 //! [`matches!`]: https://crates.io/crates/matches
+//! [`bind_match::bind_match!`]: https://crates.io/crates/bind_match
+//! [`extract::extract!`]: https://crates.io/crates/extract_macro
 //!
 #![no_std]
 
