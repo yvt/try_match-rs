@@ -17,12 +17,15 @@ enum Enum<T> { Var1(T), Var2 }
 use Enum::{Var1, Var2};
 
 // The right-hand side of `=>` if successful
-assert_eq!(try_match!(Var1(x) = Var1(42)    => x),     Ok(42));
-assert_eq!(try_match!(Var2    = Var2::<u32> => "yay"), Ok("yay"));
+assert_eq!(try_match!(Var1(42),    Var1(x) => x),     Ok(42));
+assert_eq!(try_match!(Var2::<u32>, Var2    => "yay"), Ok("yay"));
 
 // `Err(input)` on failure
-assert_eq!(try_match!(Var1(x) = Var2::<u32> => x),     Err(Var2));
-assert_eq!(try_match!(Var2    = Var1(42)    => "yay"), Err(Var1(42)));
+assert_eq!(try_match!(Var2::<u32>, Var1(x) => x),     Err(Var2));
+assert_eq!(try_match!(Var1(42),    Var2    => "yay"), Err(Var1(42)));
+
+// Supports `if` guard
+assert_eq!(try_match!(Var1(42), Var1(x) if x < 20 => x), Err(Var1(42)));
 ```
 
 ### Implicit Mapping
@@ -33,13 +36,14 @@ compilation of the internal procedural macro):
 
 ```rust
 // `()` if there are no bound variables
-assert_eq!(try_match!(Var1(_) = Var1(42)), Ok(()));
+assert_eq!(try_match!(Var1(42), Var1(_)), Ok(()));
 
-// The bound variable if there is exactly one bound variable
-assert_eq!(try_match!(Var1(x) = Var1(42)), Ok(42));
+// The bound variable if there is exactly one bound variables
+assert_eq!(try_match!(Var1(42), Var1(x)), Ok(42));
+assert_eq!(try_match!(Var1(42), Var1(x) if x < 20), Err(Var1(42)));
 
 // An anonymous struct if there are multiple bound variables
-let vars = try_match!(Var1((a, b)) = Var1((12, 34))).unwrap();
+let vars = try_match!(Var1((12, 34)), Var1((a, b))).unwrap();
 assert_eq!((vars.a, vars.b), (12, 34));
 ```
 
@@ -47,18 +51,20 @@ It produces a tuple if you name the bound variables like `_0`, `_1`, `_2`,
 ...:
 
 ```rust
-let (a, b) = try_match!(Var1((_0, _1)) = Var1((12, 34))).unwrap();
+let (a, b) = try_match!(Var1((12, 34)), Var1((_0, _1))).unwrap();
 assert_eq!((a, b), (12, 34));
+
+try_match!(Var1((12, 34)), Var1((_0, _1)) if _0 == _1).unwrap_err();
 ```
 
 It's an error to specify non-contiguous binding indices:
 
 ```rust
-let _ = try_match!(Var1((_0, _2)) = Var1((12, 34)));
+let _ = try_match!(Var1((12, 34)), Var1((_0, _2)));
 ```
 
 ```rust
-let _ = try_match!(Var1((_0, _9223372036854775808)) = Var1((12, 34)));
+let _ = try_match!(Var1((12, 34)), Var1((_0, _9223372036854775808)));
 ```
 
 ## Restrictions
@@ -67,26 +73,24 @@ let _ = try_match!(Var1((_0, _9223372036854775808)) = Var1((12, 34)));
 
 ## Related Work
 
-[`matches!`][] (now incorporated into the standard library as
-`core::matches!`) is similar but only returns `bool` indicating whether
-matching was successful or not. It uses the syntax
-`matches!(expr, pattern)`.
+[`matcher::matches!`][] (now incorporated into the standard library as
+[`core::matches!`][]) is similar but only returns `bool` indicating whether
+matching was successful or not.
 
 ```rust
 if_rust_version! { >= 1.42 {
-    let success1 = matches!(Some(42), Some(_));
+    let success1 =   matches!(Some(42), Some(_));
+    let success2 = try_match!(Some(42), Some(_)).is_ok();
+    assert_eq!(success1, success2);
 } }
-let success2 = try_match!(Some(_) = Some(42)).is_ok();
 ```
 
-[`bind_match::bind_match!`][] uses a different syntax
-`bind_match!(input_expr, pattern => binding_expr)` (essentially an extension
-of `matches!`) and returns `Some(expr)` on success.
+[`bind_match::bind_match!`][] and [`extract::extract!`][] use the same
+syntax (except for implicit mapping) but return `Some(expr)` on success
+instead.
 
-[`extract::extract!`][] uses a similar syntax to `bind_match!` and returns
-`Some(expr)` on success.
-
-[`matches!`]: https://crates.io/crates/matches
+[`core::matches!`]: https://doc.rust-lang.org/1.56.0/core/macro.matches.html
+[`matcher::matches!`]: https://crates.io/crates/matches
 [`bind_match::bind_match!`]: https://crates.io/crates/bind_match
 [`extract::extract!`]: https://crates.io/crates/extract_macro
 

@@ -12,17 +12,29 @@ use syn::{
 };
 
 struct MacroInput {
-    pat: Pat,
     in_value: Expr,
+    pat: Pat,
+    guard: Option<(Token![if], Box<Expr>)>,
 }
 
 impl Parse for MacroInput {
     fn parse(input: ParseStream) -> Result<Self> {
-        let pat = input.call(multi_pat_with_leading_vert)?;
-        input.parse::<Token![=]>()?;
         let in_value = input.parse()?;
+        input.parse::<Token![,]>()?;
+        let pat = input.call(multi_pat_with_leading_vert)?;
+        let guard = if input.peek(Token![if]) {
+            let if_token: Token![if] = input.parse()?;
+            let guard: Expr = input.parse()?;
+            Some((if_token, Box::new(guard)))
+        } else {
+            None
+        };
 
-        Ok(Self { pat, in_value })
+        Ok(Self {
+            pat,
+            in_value,
+            guard,
+        })
     }
 }
 
@@ -52,7 +64,11 @@ fn multi_pat_with_leading_vert(input: ParseStream) -> Result<Pat> {
 #[proc_macro_hack::proc_macro_hack]
 #[proc_macro_error::proc_macro_error]
 pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
-    let MacroInput { pat, in_value } = parse_macro_input!(input);
+    let MacroInput {
+        pat,
+        in_value,
+        guard,
+    } = parse_macro_input!(input);
 
     let mut idents = Vec::new();
     collect_pat_ident(&pat, &mut idents);
@@ -123,9 +139,11 @@ pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
             }
         };
 
+    let guard = guard.map(|(t0, t1)| quote! { #t0 #t1 });
+
     let output = quote! {
         match #in_value {
-            #pat => ::core::result::Result::Ok(#success_output),
+            #pat #guard => ::core::result::Result::Ok(#success_output),
             in_value => ::core::result::Result::Err(in_value),
         }
     };
