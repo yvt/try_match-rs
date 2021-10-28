@@ -1,4 +1,4 @@
-extern crate proc_macro;
+#![warn(rust_2018_idioms)]
 
 use proc_macro::TokenStream;
 use proc_macro2::Span;
@@ -18,7 +18,7 @@ struct MacroInput {
 }
 
 impl Parse for MacroInput {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let in_value = input.parse()?;
         input.parse::<Token![,]>()?;
         let pat = input.call(multi_pat_with_leading_vert)?;
@@ -38,7 +38,7 @@ impl Parse for MacroInput {
     }
 }
 
-fn multi_pat_with_leading_vert(input: ParseStream) -> Result<Pat> {
+fn multi_pat_with_leading_vert(input: ParseStream<'_>) -> Result<Pat> {
     let leading_vert: Option<Token![|]> = input.parse()?;
     let mut pat: Pat = input.parse()?;
     if leading_vert.is_some()
