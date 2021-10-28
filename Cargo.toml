@@ -13,7 +13,7 @@ keywords = ["match", "pattern", "macro"]
 categories = ["rust-patterns", "no-std"]
 
 [features]
-default = ["implicit_map", "std"]
+default = ["implicit_map"]
 implicit_map = ["proc-macro-hack", "try_match_inner"]
 std = []
 
