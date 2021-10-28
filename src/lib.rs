@@ -105,6 +105,7 @@
 //! [`extract::extract!`]: https://crates.io/crates/extract_macro
 //!
 #![no_std]
+#![forbid(unsafe_code)]
 
 /// Try to match `$in` against a given pattern `$p`. Produces `Ok($out)` if
 /// successful; `Err($in)` otherwise.

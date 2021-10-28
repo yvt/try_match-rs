@@ -1,4 +1,5 @@
 #![warn(rust_2018_idioms)]
+#![forbid(unsafe_code)]
 
 use proc_macro::TokenStream;
 use proc_macro2::Span;
