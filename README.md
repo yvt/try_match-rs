@@ -2,10 +2,10 @@
 
 [<img src="https://docs.rs/try_match/badge.svg" alt="docs.rs">](https://docs.rs/try_match/)
 
-Provides an expression macro `try_match` that performs pattern
-matching and returns the bound variables via `Ok(_)` iff successful.
+Provides an expression macro `try_match` that matches a pattern on a given
+expression and returns the bound variables in `Ok(_)` if successful.
 
-## Examples
+## Basic Usage
 
 ### Explicit Mapping
 
@@ -67,9 +67,87 @@ let _ = try_match!(Var1((12, 34)), Var1((_0, _2)));
 let _ = try_match!(Var1((12, 34)), Var1((_0, _9223372036854775808)));
 ```
 
-## Restrictions
+## Quirks
 
- - Macros cannot be used in a supplied pattern.
+When using implicit mapping, bind variables defined inside macros are
+not recognized because at the point of `try_match`'s macro expansion,
+inner macros are not expended yet.
+
+This macro moves a value out of the place represented by the input
+expression to return it on failure. Make sure to pass a reference if this is
+not desired.
+
+```rust
+let array = [Some(UncopyValue), None];
+// ERROR: Can't move out of `array[0]`
+let _: &UncopyValue = try_match!(array[0], Some(ref x)).unwrap();
+```
+
+```rust
+let _: &UncopyValue = try_match!(&array[0], Some(x)).unwrap();
+```
+
+## Applications
+
+### `Iterator::filter_map`
+
+```rust
+let array = [Var1(42), Var2, Var1(10)];
+let filtered: Vec<_> = array
+    .iter()
+    .filter_map(|x| try_match!(x, &Var1(_0) if _0 > 20).ok())
+    .collect();
+assert_eq!(filtered, [42]);
+```
+
+### `Iterator::map` + Fallible `Iterator::collect`
+
+```rust
+let array = [Var1(42), Var2, Var1(10)];
+let filtered: Result<Vec<_>, _> = array
+    .iter()
+    .map(|x| try_match!(x, &Var1(_0) if _0 > 20))
+    .collect();
+
+// `Var2` is the first value that doesn't match
+assert_eq!(filtered, Err(&Var2));
+```
+
+### Extract Variants
+
+```rust
+impl<T> Enum<T> {
+    fn var1(&self) -> Option<&T> {
+        try_match!(self, Var1(_0)).ok()
+    }
+
+    fn is_var2(&self) -> bool {
+        matches!(self, Var2)
+    }
+}
+
+let enums = [Var1(42), Var2];
+assert_eq!(enums[0].var1(), Some(&42));
+assert_eq!(enums[1].var1(), None);
+
+assert!(!enums[0].is_var2());
+assert!(enums[1].is_var2());
+```
+
+### Expect Certain Variants
+
+```rust
+fn this_fn_expects_var1(foo: &Enum<[u8; 4]>) {
+    let (i0, i1) = try_match!(foo, &Var1([_0, _, _, _1])).unwrap();
+
+    // Once RFC 1303 is stabilized, you can do instead:
+    // let &Var1([i0, _, _, i1]) = foo else { panic!("{:?}", foo) };
+
+    assert_eq!((i0, i1), (42, 45));
+}
+
+this_fn_expects_var1(&Var1([42, 43, 44, 45]));
+```
 
 ## Related Work
 
