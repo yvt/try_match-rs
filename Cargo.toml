@@ -20,7 +20,4 @@ std = []
 [dependencies]
 try_match_inner = { version = "= 0.3.0", path = "inner", optional = true }
 
-[dev-dependencies]
-if_rust_version = "1.0.0"
-
 [workspace]

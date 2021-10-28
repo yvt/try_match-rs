@@ -182,12 +182,9 @@
 //!
 //! ```
 //! # use try_match::try_match;
-//! # use if_rust_version::if_rust_version;
-//! if_rust_version! { >= 1.42 {
-//!     let success1 =   matches!(Some(42), Some(_));
-//!     let success2 = try_match!(Some(42), Some(_)).is_ok();
-//!     assert_eq!(success1, success2);
-//! } }
+//! let success1 =   matches!(Some(42), Some(_));
+//! let success2 = try_match!(Some(42), Some(_)).is_ok();
+//! assert_eq!(success1, success2);
 //! ```
 //!
 //! [`bind_match::bind_match!`][] and [`extract::extract!`][] use the same
