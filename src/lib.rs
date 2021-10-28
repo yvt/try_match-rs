@@ -166,11 +166,6 @@ macro_rules! implicit_try_match {
 ///   `SomeType { var1, var2 }`.
 ///
 /// Otherwise, the expression evaluates to `Err($in)`.
-///
-/// `#[proc_macro_hack]` makes it possible to use this procedural macro in
-/// expression position without relying on an unstable rustc feature, but with
-/// some restrictions. See `proc_macro_hack`'s documentation for more.
 #[cfg(feature = "implicit_map")]
-#[proc_macro_hack::proc_macro_hack]
 #[doc(hidden)]
 pub use try_match_inner::implicit_try_match_inner;

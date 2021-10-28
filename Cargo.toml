@@ -14,11 +14,10 @@ categories = ["rust-patterns", "no-std"]
 
 [features]
 default = ["implicit_map"]
-implicit_map = ["proc-macro-hack", "try_match_inner"]
+implicit_map = ["try_match_inner"]
 std = []
 
 [dependencies]
-proc-macro-hack = { version = "0.5.11", optional = true }
 try_match_inner = { version = "= 0.3.0", path = "inner", optional = true }
 
 [dev-dependencies]

@@ -61,7 +61,7 @@ fn multi_pat_with_leading_vert(input: ParseStream) -> Result<Pat> {
     Ok(pat)
 }
 
-#[proc_macro_hack::proc_macro_hack]
+#[proc_macro]
 #[proc_macro_error::proc_macro_error]
 pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
     let MacroInput {
