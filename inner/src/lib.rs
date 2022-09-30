@@ -164,7 +164,7 @@ fn check_tuple_captures(idents: &[&PatIdent]) -> Option<proc_macro2::TokenStream
         .map(|i| {
             let index = {
                 let text = i.ident.to_string();
-                if text.starts_with("_") {
+                if text.starts_with('_') {
                     // assuming the index fits in `u128`...
                     text[1..].parse().ok()
                 } else {
@@ -197,14 +197,28 @@ fn check_tuple_captures(idents: &[&PatIdent]) -> Option<proc_macro2::TokenStream
         indices.sort_unstable_by_key(|e| e.0);
 
         for (&(ind, ref ident), i) in indices.iter().zip(0u128..) {
-            if ind > i {
-                if ind - 1 == i {
+            use std::cmp::Ordering::*;
+            match ind.cmp(&i) {
+                Equal => {}
+                // If `ind` and `i` increase in a different pace, that means
+                // some index is missed or specified twice
+                Less => {
+                    // FIXME: Duplicate bindings may be valid in "or" patterns
+                    assert_eq!(ind, i - 1);
+                    abort!(
+                        ident.span(),
+                        "duplicate tuple binding: `_{}` is defined for multiple times",
+                        ind
+                    );
+                }
+                Greater if ind - 1 == i => {
                     abort!(
                         ident.span(),
                         "non-contiguous tuple binding: `_{}` is missing",
                         ind - 1
                     );
-                } else {
+                }
+                Greater => {
                     abort!(
                         ident.span(),
                         "non-contiguous tuple binding: `_{}` .. `_{}` are missing",
@@ -212,13 +226,6 @@ fn check_tuple_captures(idents: &[&PatIdent]) -> Option<proc_macro2::TokenStream
                         ind - 1
                     );
                 }
-            } else if ind < i {
-                assert_eq!(i - 1, ind);
-                abort!(
-                    ident.span(),
-                    "duplicate tuple binding: `_{}` is defined for multiple times",
-                    ind
-                );
             }
         }
 
