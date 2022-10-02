@@ -8,8 +8,9 @@ fn input_evaled_only_once() {
     struct A;
     let input = A;
 
-    // `A: !Copy`, so the following line should fail to compile if
-    // `input` is evaluated twice
+    // `A: !Copy`, so the following line would fail to compile if
+    // `input` were evaluated twice
+    #[allow(clippy::let_unit_value)]
     let _ = try_match!(input, A => ()).unwrap();
 }
 
