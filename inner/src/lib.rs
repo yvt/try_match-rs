@@ -72,7 +72,7 @@ pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
     } = parse_macro_input!(input);
 
     let mut idents = Vec::new();
-    collect_pat_ident(&pat, &mut idents);
+    for_each_pat_ident(&pat, &mut |ident| idents.push(ident));
 
     idents.sort_by_key(|i| &i.ident);
     idents.dedup_by_key(|i| &i.ident);
@@ -238,47 +238,47 @@ fn check_tuple_captures(idents: &[&PatIdent]) -> Option<proc_macro2::TokenStream
     }
 }
 
-fn collect_pat_ident<'a>(pat: &'a Pat, out: &mut Vec<&'a PatIdent>) {
+fn for_each_pat_ident<'a>(pat: &'a Pat, out: &mut impl FnMut(&'a PatIdent)) {
     match pat {
-        Pat::Box(pat) => collect_pat_ident(&pat.pat, out),
+        Pat::Box(pat) => for_each_pat_ident(&pat.pat, out),
         Pat::Ident(pat) => {
-            out.push(pat);
+            out(pat);
             if let Some((_, subpat)) = &pat.subpat {
-                collect_pat_ident(subpat, out);
+                for_each_pat_ident(subpat, out);
             }
         }
         Pat::Lit(_) => {}
         Pat::Macro(_) => {}
         Pat::Or(pat) => {
             for case in pat.cases.iter() {
-                collect_pat_ident(case, out);
+                for_each_pat_ident(case, out);
             }
         }
         Pat::Path(_) => {}
         Pat::Range(_) => {}
-        Pat::Reference(pat) => collect_pat_ident(&pat.pat, out),
+        Pat::Reference(pat) => for_each_pat_ident(&pat.pat, out),
         Pat::Rest(_) => {}
         Pat::Slice(pat) => {
             for elem in pat.elems.iter() {
-                collect_pat_ident(elem, out);
+                for_each_pat_ident(elem, out);
             }
         }
         Pat::Struct(pat) => {
             for field in pat.fields.iter() {
-                collect_pat_ident(&field.pat, out);
+                for_each_pat_ident(&field.pat, out);
             }
         }
         Pat::Tuple(pat) => {
             for elem in pat.elems.iter() {
-                collect_pat_ident(elem, out);
+                for_each_pat_ident(elem, out);
             }
         }
         Pat::TupleStruct(pat) => {
             for elem in pat.pat.elems.iter() {
-                collect_pat_ident(elem, out);
+                for_each_pat_ident(elem, out);
             }
         }
-        Pat::Type(pat) => collect_pat_ident(&pat.pat, out),
+        Pat::Type(pat) => for_each_pat_ident(&pat.pat, out),
         Pat::Wild(_) => {}
         // `Pat` can't be covered exhaustively
         _ => abort!(pat.span(), "unsupported pattern"),
