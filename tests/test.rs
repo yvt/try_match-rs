@@ -29,6 +29,23 @@ fn guards_implicit_map() {
     assert_eq!(try_match!(None::<u32>, Some(a) if a < 20), Err(None));
 }
 
+#[test]
+#[allow(unused_variables)]
+#[allow(clippy::diverging_sub_expression)]
+fn return_in_guard() {
+    assert_eq!(try_match!(Some(12), Some(a) if return => a), Ok(42));
+    unreachable!();
+}
+
+#[cfg(feature = "implicit_map")]
+#[test]
+#[allow(unused_variables)]
+#[allow(clippy::diverging_sub_expression)]
+fn return_in_guard_implicit_map() {
+    assert_eq!(try_match!(Some(12), Some(a) if return), Ok(42));
+    unreachable!();
+}
+
 #[cfg(feature = "implicit_map")]
 #[test]
 fn input_evaled_only_once_implicit_map() {
