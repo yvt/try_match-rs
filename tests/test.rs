@@ -21,6 +21,7 @@ fn guards() {
     assert_eq!(try_match!(None::<u32>, Some(a) if a < 20 => a), Err(None));
 }
 
+#[cfg(feature = "implicit_map")]
 #[test]
 fn guards_implicit_map() {
     assert_eq!(try_match!(Some(12), Some(a) if a < 20), Ok(12));
