@@ -1,0 +1,5 @@
+error: non-contiguous tuple binding: `_0` is missing
+ --> tests/compile-fail/tuple_captures/noncontiguous3.rs:2:55
+  |
+2 |     let _ = try_match::try_match!(Some((1, 2)), Some((_1, _2)));
+  |                                                       ^^

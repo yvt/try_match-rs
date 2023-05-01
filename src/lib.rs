@@ -68,13 +68,6 @@
 //! let _ = try_match!(Var1((12, 34)), Var1((_0, _2)));
 //! ```
 //!
-//! ```compile_fail
-//! # use try_match::try_match;
-//! # #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
-//! # use Enum::{Var1, Var2};
-//! let _ = try_match!(Var1((12, 34)), Var1((_0, _9223372036854775808)));
-//! ```
-//!
 //! # Quirks
 //!
 //! When using implicit mapping, bind variables defined inside macros are

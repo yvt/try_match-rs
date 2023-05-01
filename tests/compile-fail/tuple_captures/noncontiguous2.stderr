@@ -1,0 +1,5 @@
+error: non-contiguous tuple binding: `_1` .. `_9223372036854775807` are missing
+ --> tests/compile-fail/tuple_captures/noncontiguous2.rs:2:59
+  |
+2 |     let _ = try_match::try_match!(Some((1, 2)), Some((_0, _9223372036854775808)));
+  |                                                           ^^^^^^^^^^^^^^^^^^^^
