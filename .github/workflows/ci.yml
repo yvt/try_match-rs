@@ -43,7 +43,7 @@ jobs:
 
       - name: Skip doctests if not fully-featured
         if: ${{ matrix.features != 'implicit_map' }}
-        run: echo "test_param=--lib" >> $GITHUB_ENV
+        run: echo "test_param=--lib --tests" >> $GITHUB_ENV
 
       - name: cargo build
         uses: actions-rs/cargo@v1
