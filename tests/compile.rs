@@ -9,3 +9,9 @@ fn fail_tuple_captures() {
 fn fail_no_implicit_map() {
     trybuild::TestCases::new().compile_fail("tests/compile-fail/no_implicit_map/**/*.rs");
 }
+
+#[test]
+#[cfg(feature = "implicit_map")]
+fn fail_reserved() {
+    trybuild::TestCases::new().compile_fail("tests/compile-fail/reserved/**/*.rs");
+}

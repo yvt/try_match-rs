@@ -1,0 +1,5 @@
+error: no rules expected the token `_`
+ --> tests/compile-fail/reserved/try_match_scrutinee_placeholder.rs:4:35
+  |
+4 |     let _ = try_match::try_match!(_, Some(_0))(Some(42));
+  |                                   ^ no rules expected this token in macro call

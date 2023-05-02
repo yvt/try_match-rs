@@ -1,0 +1,5 @@
+error: unexpected end of macro invocation
+ --> tests/compile-fail/reserved/try_match_no_arms2.rs:2:43
+  |
+2 |     let _ = try_match::try_match!(Some(42));
+  |                                           ^ missing tokens in macro arguments
