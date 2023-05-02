@@ -1,0 +1,7 @@
+error: can't use the implicit mapping form of `try_match!` because the feature `implicit_map` is disabled
+ --> tests/compile-fail/no_implicit_map/fail.rs:2:13
+  |
+2 |     let _ = try_match::try_match!(Some((1, 2)), Some((_0, _1)));
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the macro `$crate::implicit_try_match` which comes from the expansion of the macro `try_match::try_match` (in Nightly builds, run with -Z macro-backtrace for more info)
