@@ -36,7 +36,7 @@ impl Parse for MacroInput {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let in_value = input.parse()?;
         input.parse::<Token![,]>()?;
-        let pat = input.call(multi_pat_with_leading_vert)?;
+        let pat = Pat::parse_multi_with_leading_vert(&input)?;
         let guard = if input.peek(Token![if]) {
             let if_token: Token![if] = input.parse()?;
             let guard: Expr = input.parse()?;
@@ -51,29 +51,6 @@ impl Parse for MacroInput {
             guard,
         })
     }
-}
-
-fn multi_pat_with_leading_vert(input: ParseStream<'_>) -> Result<Pat> {
-    let leading_vert: Option<Token![|]> = input.parse()?;
-    let mut pat: Pat = input.parse()?;
-    if leading_vert.is_some()
-        || input.peek(Token![|]) && !input.peek(Token![||]) && !input.peek(Token![|=])
-    {
-        let mut cases = syn::punctuated::Punctuated::new();
-        cases.push_value(pat);
-        while input.peek(Token![|]) && !input.peek(Token![||]) && !input.peek(Token![|=]) {
-            let punct = input.parse()?;
-            cases.push_punct(punct);
-            let pat: Pat = input.parse()?;
-            cases.push_value(pat);
-        }
-        pat = Pat::Or(syn::PatOr {
-            attrs: Vec::new(),
-            leading_vert,
-            cases,
-        });
-    }
-    Ok(pat)
 }
 
 #[proc_macro]
@@ -253,7 +230,6 @@ fn check_tuple_captures(idents: &[&PatIdent]) -> Result<Option<proc_macro2::Toke
 
 fn for_each_pat_ident<'a>(pat: &'a Pat, out: &mut impl FnMut(&'a PatIdent)) -> Result<()> {
     match pat {
-        Pat::Box(pat) => for_each_pat_ident(&pat.pat, out)?,
         Pat::Ident(pat) => {
             out(pat);
             if let Some((_, subpat)) = &pat.subpat {
@@ -287,7 +263,7 @@ fn for_each_pat_ident<'a>(pat: &'a Pat, out: &mut impl FnMut(&'a PatIdent)) -> R
             }
         }
         Pat::TupleStruct(pat) => {
-            for elem in pat.pat.elems.iter() {
+            for elem in pat.elems.iter() {
                 for_each_pat_ident(elem, out)?;
             }
         }
