@@ -103,8 +103,8 @@ assert!(enums[1].is_var2());
 fn this_fn_expects_var1(foo: &Enum<[u8; 4]>) {
     let (i0, i1) = try_match!(foo, &Var1([_0, _, _, _1])).unwrap();
 
-    // Once RFC 1303 is stabilized, you can do instead:
-    // let &Var1([i0, _, _, i1]) = foo else { panic!("{:?}", foo) };
+    // Alternatively, you could use let-else (stabilized in Rust 1.65.0):
+    // let &Var1([i0, _, _, i1]) = foo else { panic!("{foo:?}") };
 
     assert_eq!((i0, i1), (42, 45));
 }
