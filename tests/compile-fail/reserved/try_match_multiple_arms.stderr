@@ -3,3 +3,9 @@ error: no rules expected the token `,`
   |
 2 |     let _ = try_match::try_match!(Some(42), Some(_) => 1, None => 0);
   |                                                         ^ no rules expected this token in macro call
+  |
+note: while trying to match meta-variable `$out:expr`
+ --> src/lib.rs
+  |
+  |     ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? => $out:expr) => {
+  |                                                        ^^^^^^^^^
