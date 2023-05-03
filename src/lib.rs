@@ -177,9 +177,13 @@
 //!
 //! # Quirks
 //!
+//! ## Macros Inside Patterns
+//!
 //! When using implicit mapping, bind variables defined inside macros are
 //! not recognized because at the point of `try_match`'s macro expansion,
 //! inner macros are not expended yet.
+//!
+//! ## Input Ownership
 //!
 //! This macro moves a value out of the place represented by the input
 //! expression to return it on failure. Make sure to pass a reference if this is
@@ -200,7 +204,7 @@
 //! let _: &UncopyValue = try_match!(&array[0], Some(x)).unwrap();
 //! ```
 //!
-//! ## Binding/constant disambiguation
+//! ## Binding/Constant Disambiguation
 //!
 //! An identifier in a pattern is either a variable binding or a constant
 //! pattern, and these cannot be distinguished syntactically. To address this
