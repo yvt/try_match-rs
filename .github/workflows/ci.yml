@@ -42,6 +42,8 @@ jobs:
         with:
           profile: minimal
           toolchain: ${{ matrix.toolchain }}
+      - name: Override the project-default Rust toolchain
+        run: rm rust-toolchain
 
       - name: Skip doctests if not fully-featured
         if: ${{ !endsWith(matrix.features, 'implicit_map') }}
