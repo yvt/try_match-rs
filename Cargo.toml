@@ -15,6 +15,7 @@ categories = ["rust-patterns", "no-std"]
 [features]
 default = ["implicit_map"]
 implicit_map = ["try_match_inner"]
+unstable = []
 std = []
 
 [dependencies]

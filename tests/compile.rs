@@ -12,6 +12,7 @@ fn fail_no_implicit_map() {
 
 #[test]
 #[cfg(feature = "implicit_map")]
+#[cfg(not(feature = "unstable"))]
 fn fail_reserved() {
     trybuild::TestCases::new().compile_fail("tests/compile-fail/reserved/**/*.rs");
 }

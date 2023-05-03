@@ -32,6 +32,8 @@ jobs:
         features:
           - ""
           - "implicit_map"
+          - "unstable"
+          - "unstable,implicit_map"
 
       fail-fast: false
     steps:
@@ -42,7 +44,7 @@ jobs:
           toolchain: ${{ matrix.toolchain }}
 
       - name: Skip doctests if not fully-featured
-        if: ${{ matrix.features != 'implicit_map' }}
+        if: ${{ !endsWith(matrix.features, 'implicit_map') }}
         run: echo "test_param=--lib --tests" >> $GITHUB_ENV
 
       - name: cargo build

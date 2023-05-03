@@ -68,6 +68,113 @@
 //! let _ = try_match!(Var1((12, 34)), Var1((_0, _2)));
 //! ```
 //!
+//! # Unstable Features
+//!
+//! *Requires `unstable` Cargo feature, exempt from semver guarantees.*
+//!
+//! <details><summary><h3>Partial Application</h3></summary>
+//!
+//! Tracking issue: [#3](https://github.com/yvt/try_match-rs/issues/3)
+//!
+//! Omit the scrutinee expression to produce a closure:
+//!
+//! ```rust
+//! # {
+//! #![cfg(feature = "unstable")]
+//! # use try_match::try_match;
+//! # #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
+//! # use Enum::{Var1, Var2};
+//! assert_eq!(try_match!(Var1(42), Var1(x)), Ok(42));
+//! //                    ^^^^^^^^  -------
+//! assert_eq!(try_match!(, Var1(x))(Var1(42)), Ok(42));
+//! //                      -------  ^^^^^^^^
+//!
+//! // Equivalent to:
+//! assert_eq!((|x| try_match!(x, Var1(x)))(Var1(42)), Ok(42));
+//! //                             -------  ^^^^^^^^
+//! # }
+//! ```
+//!
+//! ```rust
+//! # {
+//! #![cfg(feature = "unstable")]
+//! # use try_match::try_match;
+//! # #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
+//! # use Enum::{Var1, Var2};
+//! let array = [Var1(42), Var2, Var1(10)];
+//! let filtered: Result<Vec<_>, _> = array
+//!     .iter()
+//!     .map(try_match!(, &Var1(_0) if _0 > 20))
+//!     .collect();
+//!
+//! // `Var2` is the first value that doesn't match
+//! assert_eq!(filtered, Err(&Var2));
+//! # }
+//! ```
+//!
+//! *Caveat:* Since this mode is implemented by a closure,
+//! [the default binding mode][] ([RFC 2005][]), ownership, and control flow
+//! may work differently:
+//!
+//! ```rust
+//! # {
+//! # #![cfg(feature = "unstable")]
+//! # use try_match::try_match;
+//! try_match!(&Some(42), Some(_0));
+//! try_match!(&Some(42), &Some(ref _0));
+//! # }
+//! ```
+//!
+//! ```rust,compile_fail
+//! # use try_match::try_match;
+//! try_match!(, Some(_0))(&Some(42));
+//! // ERROR: expected enum `Option`, found reference
+//! ```
+//!
+//! ```rust
+//! # {
+//! # #![cfg(feature = "unstable")]
+//! # use try_match::try_match;
+//! use std::rc::Rc;
+//!
+//! // `rc2` is conditionally dropped
+//! let rc1 = Rc::new(());
+//! let rc2 = Rc::clone(&rc1);
+//! try_match!(None::<()>, Some(_) => drop(rc2));
+//! assert_eq!(Rc::strong_count(&rc1), 2);
+//!
+//! // `rc2` is unconditionally moved into a closure and dropped
+//! let rc1 = Rc::new(());
+//! let rc2 = Rc::clone(&rc1);
+//! try_match!(, Some(_) => drop(rc2))(None::<()>);
+//! assert_eq!(Rc::strong_count(&rc1), 1);
+//! # }
+//! ```
+//!
+//! ```rust
+//! # {
+//! # #![cfg(feature = "unstable")]
+//! # use try_match::try_match;
+//! fn func_uncurried() {
+//!     try_match!((), () => return);
+//!     unreachable!();
+//! }
+//!
+//! fn func_curried() -> i32 {
+//!     try_match!(, () => return Ok(()))(());
+//!     42  // reachable
+//! }
+//!
+//! func_uncurried();
+//! func_curried();
+//! # }
+//! ```
+//!
+//! [the default binding mode]: https://doc.rust-lang.org/1.69.0/reference/patterns.html#binding-modes
+//! [RFC 2005]: https://rust-lang.github.io/rfcs/2005-match-ergonomics.html
+//!
+//! </details>
+//!
 //! # Quirks
 //!
 //! When using implicit mapping, bind variables defined inside macros are
@@ -218,6 +325,14 @@ macro_rules! try_match {
     ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)?) => {
         $crate::implicit_try_match!($in, $($p)|+ $(if $guard)?)
     };
+
+    // Partial application (requires `unstable` Cargo feature)
+    (, $($pattern_and_rest:tt)*) => {
+        $crate::assert_unstable!(
+            ["partial application"]
+            |scrutinee| $crate::try_match!(scrutinee, $($pattern_and_rest)*)
+        )
+    }
 }
 
 #[cfg(feature = "implicit_map")]
@@ -239,6 +354,24 @@ macro_rules! implicit_try_match {
              the feature `implicit_map` is disabled"
         )
     };
+}
+
+#[cfg(feature = "unstable")]
+#[macro_export]
+#[doc(hidden)]
+macro_rules! assert_unstable {
+    ([$($msg:tt)*] $($tt:tt)*) => {
+        $($tt)*
+    }
+}
+
+#[cfg(not(feature = "unstable"))]
+#[macro_export]
+#[doc(hidden)]
+macro_rules! assert_unstable {
+    ([$($msg:tt)*] $($tt:tt)*) => {
+        compile_error!(concat!($($msg)*, " requires `unstable` Cargo feature"))
+    }
 }
 
 /// Pattern: `$p:pat`
