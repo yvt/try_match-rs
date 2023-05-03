@@ -19,7 +19,7 @@ unstable = []
 std = []
 
 [dependencies]
-try_match_inner = { version = "= 0.4.0", path = "inner", optional = true }
+try_match_inner = { version = "0.4.0", path = "inner", optional = true }
 
 [workspace]
 
