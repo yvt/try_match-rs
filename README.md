@@ -112,7 +112,7 @@ fn this_fn_expects_var1(foo: &Enum<[u8; 4]>) {
 this_fn_expects_var1(&Var1([42, 43, 44, 45]));
 ```
 
-## Related Work
+## Related Works
 
 [`matcher::matches!`][] (now incorporated into the standard library as
 [`core::matches!`][]) is similar but only returns `bool` indicating whether
