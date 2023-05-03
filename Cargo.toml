@@ -10,7 +10,7 @@ repository = "https://github.com/yvt/try_match-rs"
 description = """
 An expression macro to match a pattern and return the bound variables in `Result`.
 """
-keywords = ["match", "pattern", "macro"]
+keywords = ["match", "pattern", "macro", "variant", "enum"]
 categories = ["rust-patterns", "no-std"]
 
 [features]
