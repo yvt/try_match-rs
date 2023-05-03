@@ -64,7 +64,7 @@ pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
     let mut idents = Vec::new();
     bail_if_err!(for_each_pat_ident(&pat, &mut |ident| idents.push(ident)));
 
-    idents.sort_by_key(|i| &i.ident);
+    idents.sort_unstable_by_key(|i| &i.ident);
     idents.dedup_by_key(|i| &i.ident);
 
     let success_output =
