@@ -30,9 +30,8 @@ assert_eq!(try_match!(Var1(42), Var1(x) if x < 20 => x), Err(Var1(42)));
 
 ### Implicit Mapping
 
-`=>` and the part that comes after can be omitted (requires `implicit_map`
-feature, which is enabled by default; you can disable it to skip the
-compilation of the internal procedural macro):
+`=>` and the following part can be omitted (requires `implicit_map`
+feature, which is enabled by default):
 
 ```rust
 // `()` if there are no bound variables
@@ -45,46 +44,10 @@ assert_eq!(try_match!(Var1(42), Var1(x) if x < 20), Err(Var1(42)));
 // An anonymous struct if there are multiple bound variables
 let vars = try_match!(Var1((12, 34)), Var1((a, b))).unwrap();
 assert_eq!((vars.a, vars.b), (12, 34));
-```
 
-It produces a tuple if you name the bound variables like `_0`, `_1`, `_2`,
-...:
-
-```rust
+// A tuple if the variable names are numeric
 let (a, b) = try_match!(Var1((12, 34)), Var1((_0, _1))).unwrap();
 assert_eq!((a, b), (12, 34));
-
-try_match!(Var1((12, 34)), Var1((_0, _1)) if _0 == _1).unwrap_err();
-```
-
-It's an error to specify non-contiguous binding indices:
-
-```rust
-let _ = try_match!(Var1((12, 34)), Var1((_0, _2)));
-```
-
-```rust
-let _ = try_match!(Var1((12, 34)), Var1((_0, _9223372036854775808)));
-```
-
-## Quirks
-
-When using implicit mapping, bind variables defined inside macros are
-not recognized because at the point of `try_match`'s macro expansion,
-inner macros are not expended yet.
-
-This macro moves a value out of the place represented by the input
-expression to return it on failure. Make sure to pass a reference if this is
-not desired.
-
-```rust
-let array = [Some(UncopyValue), None];
-// ERROR: Can't move out of `array[0]`
-let _: &UncopyValue = try_match!(array[0], Some(ref x)).unwrap();
-```
-
-```rust
-let _: &UncopyValue = try_match!(&array[0], Some(x)).unwrap();
 ```
 
 ## Applications
@@ -170,5 +133,6 @@ instead.
 [`bind_match::bind_match!`]: https://crates.io/crates/bind_match
 [`extract::extract!`]: https://crates.io/crates/extract_macro
 
+## License
 
-License: MIT/Apache-2.0
+MIT/Apache-2.0
