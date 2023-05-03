@@ -69,6 +69,50 @@ fn pat_ident_subpat_implicit_map() {
     assert_eq!((m.a, m.b), (1, 2));
 }
 
+#[cfg(feature = "implicit_map")]
+#[test]
+#[allow(non_snake_case)]
+fn pat_ident_guessed_binding_implicit_map() {
+    assert_eq!(try_match!(42, f), Ok(42));
+    assert_eq!(try_match!(42, fA), Ok(42));
+    assert_eq!(try_match!(42, fは), Ok(42));
+    assert_eq!(try_match!(42, _f), Ok(42));
+    assert_eq!(try_match!(42, _fA), Ok(42));
+    assert_eq!(try_match!(42, _fは), Ok(42));
+    assert_eq!(try_match!(42, _0), Ok(42));
+    assert_eq!(try_match!(42, r#f), Ok(42));
+    assert_eq!(try_match!(42, r#fA), Ok(42));
+    assert_eq!(try_match!(42, r#fは), Ok(42));
+    assert_eq!(try_match!(42, r#_f), Ok(42));
+    assert_eq!(try_match!(42, r#_fA), Ok(42));
+    assert_eq!(try_match!(42, r#_fは), Ok(42));
+    assert_eq!(try_match!(42, r#_0), Ok(42));
+}
+
+#[cfg(feature = "implicit_map")]
+#[test]
+fn pat_ident_guessed_constant_implicit_map() {
+    const F: i32 = 0;
+    const FA: i32 = 0;
+    const Fは: i32 = 0;
+    const _F: i32 = 0;
+    const _FA: i32 = 0;
+    const _Fは: i32 = 0;
+
+    assert_eq!(try_match!(42, F), Err(42));
+    assert_eq!(try_match!(42, FA), Err(42));
+    assert_eq!(try_match!(42, Fは), Err(42));
+    assert_eq!(try_match!(42, _F), Err(42));
+    assert_eq!(try_match!(42, _FA), Err(42));
+    assert_eq!(try_match!(42, _Fは), Err(42));
+    assert_eq!(try_match!(42, r#F), Err(42));
+    assert_eq!(try_match!(42, r#FA), Err(42));
+    assert_eq!(try_match!(42, r#Fは), Err(42));
+    assert_eq!(try_match!(42, r#_F), Err(42));
+    assert_eq!(try_match!(42, r#_FA), Err(42));
+    assert_eq!(try_match!(42, r#_Fは), Err(42));
+}
+
 #[test]
 fn guards() {
     assert_eq!(try_match!(Some(12), Some(a) if a < 20 => a), Ok(12));

@@ -1,5 +1,11 @@
 #[test]
 #[cfg(feature = "implicit_map")]
+fn fail_ident_disambiguation() {
+    trybuild::TestCases::new().compile_fail("tests/compile-fail/ident_disambiguation/**/*.rs");
+}
+
+#[test]
+#[cfg(feature = "implicit_map")]
 fn fail_tuple_captures() {
     trybuild::TestCases::new().compile_fail("tests/compile-fail/tuple_captures/**/*.rs");
 }

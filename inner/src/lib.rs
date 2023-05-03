@@ -56,13 +56,51 @@ impl Parse for MacroInput {
 #[proc_macro]
 pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
     let MacroInput {
-        pat,
+        mut pat,
         in_value,
         guard,
     } = parse_macro_input!(input);
 
+    // Make sure all `Pat::Ident` that are variable bindings have subpatterns,
+    // and the rest don't
+    let mut introduced_subpat = false;
+    bail_if_err!(for_each_pat_ident_mut(&mut pat, &mut |pat| {
+        if pat.subpat.is_some() {
+            // Definitely a variable binding and already has a subpattern
+            Ok(())
+        } else {
+            match is_likely_variable_binding(&pat.ident) {
+                // Probably a variable binding; add a wildcard subpattern
+                Some(true) => {
+                    pat.subpat = Some((
+                        syn::token::At {
+                            spans: [Span::call_site()],
+                        },
+                        Box::new(Pat::Wild(syn::PatWild {
+                            attrs: Vec::new(),
+                            underscore_token: syn::token::Underscore {
+                                spans: [Span::call_site()],
+                            },
+                        })),
+                    ));
+                    introduced_subpat = true;
+                    Ok(())
+                }
+                // Probably a constant pattern
+                Some(false) => Ok(()),
+                // Unsure; abort compilation to be safe
+                None => abort!(pat.span(), "ambiguous identifier pattern"),
+            }
+        }
+    }));
+
     let mut idents = Vec::new();
-    bail_if_err!(for_each_pat_ident(&pat, &mut |ident| idents.push(ident)));
+    bail_if_err!(for_each_pat_ident(&pat, &mut |ident| {
+        if ident.subpat.is_some() {
+            idents.push(ident);
+        }
+        Ok(())
+    }));
 
     idents.sort_unstable_by_key(|i| &i.ident);
     idents.dedup_by_key(|i| &i.ident);
@@ -133,8 +171,18 @@ pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
 
     let guard = guard.map(|(t0, t1)| quote! { #t0 #t1 });
 
+    let allow_redundant_pattern = if introduced_subpat {
+        // Clippy may warn about wildcard subpatterns on variable bindings.
+        // They could indeed be redundant if they don't shadow constants, but we
+        // have no way of telling that.
+        quote! { #[allow(clippy::redundant_pattern)] }
+    } else {
+        quote! {}
+    };
+
     let output = quote! {
         match #in_value {
+            #allow_redundant_pattern
             #pat #guard => ::core::result::Result::Ok(#success_output),
             in_value => ::core::result::Result::Err(in_value),
         }
@@ -229,53 +277,160 @@ fn check_tuple_captures(idents: &[&PatIdent]) -> Result<Option<proc_macro2::Toke
     }
 }
 
-fn for_each_pat_ident<'a>(pat: &'a Pat, out: &mut impl FnMut(&'a PatIdent)) -> Result<()> {
-    match pat {
-        Pat::Const(_) => {}
-        Pat::Ident(pat) => {
-            out(pat);
-            if let Some((_, subpat)) = &pat.subpat {
-                for_each_pat_ident(subpat, out)?;
+macro_rules! define_for_each_pat_ident {
+    (
+        #[mut($($mut:tt)*)]
+        #[iter($iter:ident)]
+        #[out_lifetime($($out_lifetime:tt)*)]
+        fn $ident:ident(..);
+    ) => {
+        #[allow(clippy::needless_lifetimes)]
+        fn $ident<'a>(
+            pat: &'a $($mut)* Pat,
+            out: &mut impl FnMut(&$($out_lifetime)* $($mut)* PatIdent) -> Result<()>,
+        ) -> Result<()> {
+            match pat {
+                Pat::Const(_) => {}
+                Pat::Ident(pat) => {
+                    out(pat)?;
+                    if let Some((_, subpat)) = & $($mut)* pat.subpat {
+                        $ident(subpat, out)?;
+                    }
+                }
+                Pat::Lit(_) => {}
+                Pat::Macro(_) => {}
+                Pat::Or(pat) => {
+                    for case in pat.cases.$iter() {
+                        $ident(case, out)?;
+                    }
+                }
+                Pat::Paren(pat) => $ident(& $($mut)* pat.pat, out)?,
+                Pat::Path(_) => {}
+                Pat::Range(_) => {}
+                Pat::Reference(pat) => $ident(& $($mut)* pat.pat, out)?,
+                Pat::Rest(_) => {}
+                Pat::Slice(pat) => {
+                    for elem in pat.elems.$iter() {
+                        $ident(elem, out)?;
+                    }
+                }
+                Pat::Struct(pat) => {
+                    for field in pat.fields.$iter() {
+                        $ident(& $($mut)* field.pat, out)?;
+                    }
+                }
+                Pat::Tuple(pat) => {
+                    for elem in pat.elems.$iter() {
+                        $ident(elem, out)?;
+                    }
+                }
+                Pat::TupleStruct(pat) => {
+                    for elem in pat.elems.$iter() {
+                        $ident(elem, out)?;
+                    }
+                }
+                Pat::Type(pat) => $ident(& $($mut)* pat.pat, out)?,
+                Pat::Wild(_) => {}
+                // `Pat` can't be covered exhaustively.
+                // `Verbatim` is intentionally unhandled so that future additions to
+                // `Pat` won't break existing code.
+                _ => abort!(pat.span(), "unsupported pattern"),
             }
+            Ok(())
         }
-        Pat::Lit(_) => {}
-        Pat::Macro(_) => {}
-        Pat::Or(pat) => {
-            for case in pat.cases.iter() {
-                for_each_pat_ident(case, out)?;
-            }
-        }
-        Pat::Paren(pat) => for_each_pat_ident(&pat.pat, out)?,
-        Pat::Path(_) => {}
-        Pat::Range(_) => {}
-        Pat::Reference(pat) => for_each_pat_ident(&pat.pat, out)?,
-        Pat::Rest(_) => {}
-        Pat::Slice(pat) => {
-            for elem in pat.elems.iter() {
-                for_each_pat_ident(elem, out)?;
-            }
-        }
-        Pat::Struct(pat) => {
-            for field in pat.fields.iter() {
-                for_each_pat_ident(&field.pat, out)?;
-            }
-        }
-        Pat::Tuple(pat) => {
-            for elem in pat.elems.iter() {
-                for_each_pat_ident(elem, out)?;
-            }
-        }
-        Pat::TupleStruct(pat) => {
-            for elem in pat.elems.iter() {
-                for_each_pat_ident(elem, out)?;
-            }
-        }
-        Pat::Type(pat) => for_each_pat_ident(&pat.pat, out)?,
-        Pat::Wild(_) => {}
-        // `Pat` can't be covered exhaustively.
-        // `Verbatim` is intentionally unhandled so that future additions to
-        // `Pat` won't break existing code.
-        _ => abort!(pat.span(), "unsupported pattern"),
     }
-    Ok(())
+}
+
+define_for_each_pat_ident! {
+    #[mut()]
+    #[iter(iter)]
+    #[out_lifetime('a)]
+    fn for_each_pat_ident(..);
+}
+
+define_for_each_pat_ident! {
+    #[mut(mut)]
+    #[iter(iter_mut)]
+    #[out_lifetime()]
+    fn for_each_pat_ident_mut(..);
+}
+
+/// Use heuristics to determine if an [`Ident`] represents a variable binding.
+fn is_likely_variable_binding(ident: &Ident) -> Option<bool> {
+    struct Scanner {
+        raw_ident: RawIdent,
+        ident: Ident,
+    }
+
+    enum RawIdent {
+        ExpectingR,
+        ExpectingHash,
+        Done,
+    }
+
+    enum Ident {
+        ExpectingAlphanumOrUnderscore,
+        ExpectingAlphanum,
+        Done(Option<bool>),
+    }
+
+    use std::fmt::Write;
+    impl Write for Scanner {
+        fn write_str(&mut self, s: &str) -> std::fmt::Result {
+            for b in s.bytes() {
+                // Skip `r#` prefix
+                match (&self.raw_ident, b) {
+                    (RawIdent::ExpectingR, b'r') => {
+                        self.raw_ident = RawIdent::ExpectingHash;
+                    }
+                    (RawIdent::ExpectingHash, b'#') => {
+                        self.raw_ident = RawIdent::Done;
+
+                        // It starts with `r#`; reset `self.ident`
+                        self.ident = Ident::ExpectingAlphanumOrUnderscore;
+                        continue;
+                    }
+                    _ => {
+                        // It doesn't have a `r#` prefix
+                        self.raw_ident = RawIdent::Done;
+                    }
+                }
+
+                // Match against pattern `^_?([0-9a-zA-Z])`
+                //
+                // It's intentionally limited to ASCII characters so that the
+                // result is consistent between Unicode versions. The Unicode
+                // stability policy can be found here:
+                // <http://www.unicode.org/policies/stability_policy.html>
+                match (&self.ident, b) {
+                    (Ident::Done(_), _) => {}
+                    (Ident::ExpectingAlphanumOrUnderscore | Ident::ExpectingAlphanum, b)
+                        if b.is_ascii_alphanumeric() =>
+                    {
+                        // Output `true` if the alphanumeric byte matches `[0-9a-z]`
+                        self.ident = Ident::Done(Some(!b.is_ascii_uppercase()));
+                    }
+                    (Ident::ExpectingAlphanumOrUnderscore, b'_') => {
+                        self.ident = Ident::ExpectingAlphanum;
+                    }
+                    _ => {
+                        self.ident = Ident::Done(None);
+                    }
+                }
+            }
+            Ok(())
+        }
+    }
+
+    let mut scanner = Scanner {
+        raw_ident: RawIdent::ExpectingR,
+        ident: Ident::ExpectingAlphanumOrUnderscore,
+    };
+    write!(scanner, "{}", ident).unwrap();
+
+    match scanner.ident {
+        Ident::ExpectingAlphanumOrUnderscore => None, // Empty or `r#`, should be impossible
+        Ident::ExpectingAlphanum => None,             // `_`, should be handled by `Pat::Wild`
+        Ident::Done(output) => output,
+    }
 }

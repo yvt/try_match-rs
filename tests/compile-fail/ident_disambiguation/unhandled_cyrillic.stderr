@@ -1,0 +1,5 @@
+error: ambiguous identifier pattern
+ --> tests/compile-fail/ident_disambiguation/unhandled_cyrillic.rs:2:31
+  |
+2 |     try_match::try_match!(42, привет);
+  |                               ^^^^^^

@@ -199,6 +199,35 @@
 //! # let array = [Some(UncopyValue), None];
 //! let _: &UncopyValue = try_match!(&array[0], Some(x)).unwrap();
 //! ```
+//!
+//! ## Binding/constant disambiguation
+//!
+//! An identifier in a pattern is either a variable binding or a constant
+//! pattern, and these cannot be distinguished syntactically. To address this
+//! problem, the implicit mapper employs heuristics based on the standard naming
+//! conventions ([RFC 430][]).
+//!
+//! ```rust
+//! # use try_match::try_match;
+//! const ZERO: i32 = 0;
+//!
+//! // Binding: `zero` matches regex /^_?[a-z0-9]/
+//! assert_eq!(try_match!(42, zero), Ok(42));
+//!
+//! // Constant: `ZERO` matches regex /^_?[A-Z]/
+//! assert_eq!(try_match!(42, ZERO), Err(42));
+//!
+//! // Binding: Only a binding can have a subpattern
+//! assert_eq!(try_match!(42, THE_ANSWER @ _), Ok(42));
+//! ```
+//!
+//! ```rust,compile_fail
+//! # use try_match::try_match;
+//! // ERROR: ambiguous identifier pattern
+//! assert_eq!(try_match!(42, 你好), Ok(42));
+//! ```
+//!
+//! [RFC 430]: https://rust-lang.github.io/rfcs/0430-finalizing-naming-conventions.html
 #![no_std]
 #![forbid(unsafe_code)]
 

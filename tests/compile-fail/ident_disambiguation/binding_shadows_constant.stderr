@@ -1,0 +1,7 @@
+error[E0530]: match bindings cannot shadow constants
+ --> tests/compile-fail/ident_disambiguation/binding_shadows_constant.rs:3:31
+  |
+2 |     const foo: i32 = 0;
+  |     ------------------- the constant `foo` is defined here
+3 |     try_match::try_match!(42, foo);
+  |                               ^^^ cannot be named the same as a constant
