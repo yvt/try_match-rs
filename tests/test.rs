@@ -55,6 +55,20 @@ fn ident_inside_types() {
 //     assert_eq!(try_match!(42, const { 42 }), Ok(()));
 // }
 
+#[cfg(feature = "implicit_map")]
+#[test]
+fn pat_ident_subpat_implicit_map() {
+    // Tuple pattern
+    assert_eq!(try_match!((), _0 @ _), Ok(()));
+
+    // Single
+    assert_eq!(try_match!((), a @ _), Ok(()));
+
+    // Multiple
+    let m = try_match!((1, 2), (a @ _, b @ _)).unwrap();
+    assert_eq!((m.a, m.b), (1, 2));
+}
+
 #[test]
 fn guards() {
     assert_eq!(try_match!(Some(12), Some(a) if a < 20 => a), Ok(12));

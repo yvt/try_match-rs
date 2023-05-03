@@ -79,7 +79,8 @@ pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
                     quote! {()}
                 }
                 [single] => {
-                    quote! {#single}
+                    let ident = &single.ident;
+                    quote! {#ident}
                 }
                 multi => {
                     // `var1`, `var2`, ...
