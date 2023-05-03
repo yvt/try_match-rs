@@ -37,7 +37,7 @@ feature, which is enabled by default):
 // `()` if there are no bound variables
 assert_eq!(try_match!(Var1(42), Var1(_)), Ok(()));
 
-// The bound variable if there is exactly one bound variables
+// The bound variable if there is exactly one bound variable
 assert_eq!(try_match!(Var1(42), Var1(x)), Ok(42));
 assert_eq!(try_match!(Var1(42), Var1(x) if x < 20), Err(Var1(42)));
 
