@@ -3,7 +3,6 @@
 
 use proc_macro::TokenStream;
 use proc_macro2::Span;
-use proc_macro_error::abort;
 use quote::quote;
 use syn::{
     parse::{Parse, ParseStream},
@@ -11,6 +10,21 @@ use syn::{
     spanned::Spanned,
     Expr, Ident, LitStr, Pat, PatIdent, Result, Token,
 };
+
+macro_rules! abort {
+    ($span:expr, $($format:tt)+) => {{
+        return Err(syn::Error::new($span, format!($($format)+)));
+    }};
+}
+
+macro_rules! bail_if_err {
+    ($expr:expr) => {
+        match $expr {
+            Ok(x) => x,
+            Err(e) => return e.into_compile_error().into(),
+        }
+    };
+}
 
 struct MacroInput {
     in_value: Expr,
@@ -63,7 +77,6 @@ fn multi_pat_with_leading_vert(input: ParseStream<'_>) -> Result<Pat> {
 }
 
 #[proc_macro]
-#[proc_macro_error::proc_macro_error]
 pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
     let MacroInput {
         pat,
@@ -72,7 +85,7 @@ pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
     } = parse_macro_input!(input);
 
     let mut idents = Vec::new();
-    for_each_pat_ident(&pat, &mut |ident| idents.push(ident));
+    bail_if_err!(for_each_pat_ident(&pat, &mut |ident| idents.push(ident)));
 
     idents.sort_by_key(|i| &i.ident);
     idents.dedup_by_key(|i| &i.ident);
@@ -80,7 +93,7 @@ pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
     let success_output =
         // Check if bound variables are all like `_0`, `_1`, in which case
         // collect them in a tuple
-        if let Some(tokens) = check_tuple_captures(&idents) {
+        if let Some(tokens) = bail_if_err!(check_tuple_captures(&idents)) {
             tokens
         } else {
             // Decide what to do based on the number of bound variables
@@ -155,7 +168,7 @@ pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
 /// Check if `idents` contains a tuple binding (e.g., `_4`). If it does, returns
 /// a `TokenStream` that collects the bound variables (e.g., `(_0, _1)`).
 #[allow(clippy::manual_strip)] // `strip_prefix` is only available in Rust ≥ 1.45
-fn check_tuple_captures(idents: &[&PatIdent]) -> Option<proc_macro2::TokenStream> {
+fn check_tuple_captures(idents: &[&PatIdent]) -> Result<Option<proc_macro2::TokenStream>> {
     let mut some_tuple_cap = None;
     let mut some_non_tuple_cap = None;
 
@@ -232,55 +245,56 @@ fn check_tuple_captures(idents: &[&PatIdent]) -> Option<proc_macro2::TokenStream
         // `var1`, `var2`, ...
         let idents: Vec<_> = indices.into_iter().map(|p| p.1).collect();
 
-        Some(quote! { ( #(#idents),* ) })
+        Ok(Some(quote! { ( #(#idents),* ) }))
     } else {
-        None
+        Ok(None)
     }
 }
 
-fn for_each_pat_ident<'a>(pat: &'a Pat, out: &mut impl FnMut(&'a PatIdent)) {
+fn for_each_pat_ident<'a>(pat: &'a Pat, out: &mut impl FnMut(&'a PatIdent)) -> Result<()> {
     match pat {
-        Pat::Box(pat) => for_each_pat_ident(&pat.pat, out),
+        Pat::Box(pat) => for_each_pat_ident(&pat.pat, out)?,
         Pat::Ident(pat) => {
             out(pat);
             if let Some((_, subpat)) = &pat.subpat {
-                for_each_pat_ident(subpat, out);
+                for_each_pat_ident(subpat, out)?;
             }
         }
         Pat::Lit(_) => {}
         Pat::Macro(_) => {}
         Pat::Or(pat) => {
             for case in pat.cases.iter() {
-                for_each_pat_ident(case, out);
+                for_each_pat_ident(case, out)?;
             }
         }
         Pat::Path(_) => {}
         Pat::Range(_) => {}
-        Pat::Reference(pat) => for_each_pat_ident(&pat.pat, out),
+        Pat::Reference(pat) => for_each_pat_ident(&pat.pat, out)?,
         Pat::Rest(_) => {}
         Pat::Slice(pat) => {
             for elem in pat.elems.iter() {
-                for_each_pat_ident(elem, out);
+                for_each_pat_ident(elem, out)?;
             }
         }
         Pat::Struct(pat) => {
             for field in pat.fields.iter() {
-                for_each_pat_ident(&field.pat, out);
+                for_each_pat_ident(&field.pat, out)?;
             }
         }
         Pat::Tuple(pat) => {
             for elem in pat.elems.iter() {
-                for_each_pat_ident(elem, out);
+                for_each_pat_ident(elem, out)?;
             }
         }
         Pat::TupleStruct(pat) => {
             for elem in pat.pat.elems.iter() {
-                for_each_pat_ident(elem, out);
+                for_each_pat_ident(elem, out)?;
             }
         }
-        Pat::Type(pat) => for_each_pat_ident(&pat.pat, out),
+        Pat::Type(pat) => for_each_pat_ident(&pat.pat, out)?,
         Pat::Wild(_) => {}
         // `Pat` can't be covered exhaustively
         _ => abort!(pat.span(), "unsupported pattern"),
     }
+    Ok(())
 }
