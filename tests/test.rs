@@ -21,6 +21,33 @@ fn pat_paren_implicit_map() {
     assert_eq!(try_match!((), (())), Ok(()));
 }
 
+#[cfg(feature = "implicit_map")]
+#[test]
+fn ident_inside_types() {
+    trait Tr {
+        const C: () = ();
+    }
+
+    impl<T> Tr for T {
+        const C: () = ();
+    }
+
+    assert_eq!(
+        try_match!(
+            (),
+            <[(); {
+                #[allow(warnings)]
+                match () {
+                    // `_4` is a `Pat::Ident`, but `try_match!` should not
+                    // consider it as a part of the input pattern
+                    _4 => 42,
+                }
+            }] as Tr>::C
+        ),
+        Ok(())
+    );
+}
+
 // requires `inline_const_pat` <https://github.com/rust-lang/rust/issues/76001>
 // #[cfg(feature = "implicit_map")]
 // #[test]
