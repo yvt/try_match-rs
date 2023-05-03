@@ -14,6 +14,20 @@ fn input_evaled_only_once() {
     let _ = try_match!(input, A => ()).unwrap();
 }
 
+#[cfg(feature = "implicit_map")]
+#[test]
+#[allow(unused_parens)]
+fn pat_paren_implicit_map() {
+    assert_eq!(try_match!((), (())), Ok(()));
+}
+
+// requires `inline_const_pat` <https://github.com/rust-lang/rust/issues/76001>
+// #[cfg(feature = "implicit_map")]
+// #[test]
+// fn pat_const_implicit_map() {
+//     assert_eq!(try_match!(42, const { 42 }), Ok(()));
+// }
+
 #[test]
 fn guards() {
     assert_eq!(try_match!(Some(12), Some(a) if a < 20 => a), Ok(12));

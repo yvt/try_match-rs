@@ -230,6 +230,7 @@ fn check_tuple_captures(idents: &[&PatIdent]) -> Result<Option<proc_macro2::Toke
 
 fn for_each_pat_ident<'a>(pat: &'a Pat, out: &mut impl FnMut(&'a PatIdent)) -> Result<()> {
     match pat {
+        Pat::Const(_) => {}
         Pat::Ident(pat) => {
             out(pat);
             if let Some((_, subpat)) = &pat.subpat {
@@ -243,6 +244,7 @@ fn for_each_pat_ident<'a>(pat: &'a Pat, out: &mut impl FnMut(&'a PatIdent)) -> R
                 for_each_pat_ident(case, out)?;
             }
         }
+        Pat::Paren(pat) => for_each_pat_ident(&pat.pat, out)?,
         Pat::Path(_) => {}
         Pat::Range(_) => {}
         Pat::Reference(pat) => for_each_pat_ident(&pat.pat, out)?,
@@ -269,7 +271,9 @@ fn for_each_pat_ident<'a>(pat: &'a Pat, out: &mut impl FnMut(&'a PatIdent)) -> R
         }
         Pat::Type(pat) => for_each_pat_ident(&pat.pat, out)?,
         Pat::Wild(_) => {}
-        // `Pat` can't be covered exhaustively
+        // `Pat` can't be covered exhaustively.
+        // `Verbatim` is intentionally unhandled so that future additions to
+        // `Pat` won't break existing code.
         _ => abort!(pat.span(), "unsupported pattern"),
     }
     Ok(())
