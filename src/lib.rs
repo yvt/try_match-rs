@@ -259,7 +259,11 @@ macro_rules! try_match {
     };
 
     ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)?) => {
-        $crate::implicit_try_match!($in, $($p)|+ $(if $guard)?)
+        $crate::implicit_try_match!(
+            $in,
+            $($p)|+ $(if $guard)?,
+            { in_value => ::core::result::Result::Err(in_value) }
+        )
     };
 
     // Partial application (requires `unstable` Cargo feature)
