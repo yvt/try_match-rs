@@ -7,47 +7,32 @@ expression and returns the bound variables in `Ok(_)` if successful.
 
 ## Basic Usage
 
-### Explicit Mapping
-
 ```rust
 use try_match::try_match;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum Enum<T> { Var1(T), Var2 }
+
 use Enum::{Var1, Var2};
 
-// The right-hand side of `=>` if successful
-assert_eq!(try_match!(Var1(42),    Var1(x) => x),     Ok(42));
-assert_eq!(try_match!(Var2::<u32>, Var2    => "yay"), Ok("yay"));
-
-// `Err(input)` on failure
-assert_eq!(try_match!(Var2::<u32>, Var1(x) => x),     Err(Var2));
-assert_eq!(try_match!(Var1(42),    Var2    => "yay"), Err(Var1(42)));
-
-// Supports `if` guard
-assert_eq!(try_match!(Var1(42), Var1(x) if x < 20 => x), Err(Var1(42)));
-```
-
-### Implicit Mapping
-
-`=>` and the following part can be omitted (requires `implicit_map`
-feature, which is enabled by default):
-
-```rust
-// `()` if there are no bound variables
+// Returns `()` (wrapped by `Ok(_)`) if there are no bound variables
 assert_eq!(try_match!(Var1(42), Var1(_)), Ok(()));
 
-// The bound variable if there is exactly one bound variable
+// ... the bound value if there is exactly one binding
 assert_eq!(try_match!(Var1(42), Var1(x)), Ok(42));
 assert_eq!(try_match!(Var1(42), Var1(x) if x < 20), Err(Var1(42)));
 
-// An anonymous struct if there are multiple bound variables
+// ... an anonymous struct if there are multiple bindings
 let vars = try_match!(Var1((12, 34)), Var1((a, b))).unwrap();
 assert_eq!((vars.a, vars.b), (12, 34));
 
-// A tuple if the variable names are numeric
+// ... or a tuple if the binding names are numeric
 let (a, b) = try_match!(Var1((12, 34)), Var1((_0, _1))).unwrap();
 assert_eq!((a, b), (12, 34));
+
+// An optional `=>` clause specifies an explicit mapping
+assert_eq!(try_match!(Var1(42),    Var1(x) => x + 1), Ok(43));
+assert_eq!(try_match!(Var2::<u32>, Var2    => "yay"), Ok("yay"));
 ```
 
 ## Applications
