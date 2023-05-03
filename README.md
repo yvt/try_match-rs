@@ -128,10 +128,17 @@ assert_eq!(success1, success2);
 syntax (except for implicit mapping) but return `Some(expr)` on success
 instead.
 
+[`extract_variant::get_variant!`][] uses the same syntax and supports implicit
+mapping. However, it returns `Some(expr)` on success like other similar macros,
+and the implicit mapping is defined differently. The `extract_variant` crate
+also provides other variations of this macro that handle failure by returning
+`Err($closure())` (`try_variant!`) or panicking (`variant!`).
+
 [`core::matches!`]: https://doc.rust-lang.org/1.56.0/core/macro.matches.html
 [`matcher::matches!`]: https://crates.io/crates/matches
 [`bind_match::bind_match!`]: https://crates.io/crates/bind_match
 [`extract::extract!`]: https://crates.io/crates/extract_macro
+[`extract_variant::get_variant!`]: https://crates.io/crates/extract-variant/1.0.0
 
 ## License
 
