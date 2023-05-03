@@ -28,6 +28,7 @@ jobs:
         toolchain:
           - "1.56.0"
           - "1.64.0"
+          - "1.69.0"
         features:
           - ""
           - "implicit_map"
