@@ -36,7 +36,7 @@ impl Parse for MacroInput {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let in_value = input.parse()?;
         input.parse::<Token![,]>()?;
-        let pat = Pat::parse_multi_with_leading_vert(&input)?;
+        let pat = Pat::parse_multi_with_leading_vert(input)?;
         let guard = if input.peek(Token![if]) {
             let if_token: Token![if] = input.parse()?;
             let guard: Expr = input.parse()?;

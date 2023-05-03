@@ -57,6 +57,7 @@ fn ident_inside_types() {
 
 #[cfg(feature = "implicit_map")]
 #[test]
+#[allow(clippy::redundant_pattern)]
 fn pat_ident_subpat_implicit_map() {
     // Tuple pattern
     assert_eq!(try_match!((), _0 @ _), Ok(()));
