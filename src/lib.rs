@@ -302,6 +302,7 @@
 //! [RFC 430]: https://rust-lang.github.io/rfcs/0430-finalizing-naming-conventions.html
 #![no_std]
 #![forbid(unsafe_code)]
+#![cfg_attr(feature = "_doc_cfg", feature(doc_cfg))]
 
 /// Try to match `$in` against a given pattern `$p`. Produces `Ok($out)` if
 /// successful; `Err($in)` otherwise.
@@ -351,6 +352,7 @@ macro_rules! try_match {
 ///
 /// See [the crate-level documentation](index.html) for examples.
 #[cfg(feature = "unstable")]
+#[cfg_attr(feature = "_doc_cfg", doc(cfg(feature = "unstable")))]
 #[macro_export]
 macro_rules! match_ok {
     ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? => $out:expr) => {
