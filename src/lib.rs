@@ -358,7 +358,7 @@ macro_rules! match_ok {
     ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? => $out:expr) => {
         match $in {
             $($p)|+ $(if $guard)? => ::core::option::Option::Some($out),
-            in_value => ::core::option::Option::None,
+            _ => ::core::option::Option::None,
         }
     };
 
