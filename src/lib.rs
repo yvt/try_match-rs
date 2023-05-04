@@ -175,6 +175,74 @@
 //!
 //! </details>
 //!
+//! <details><summary><h3><code>Option</code>-returning Macro</h3></summary>
+//!
+//! Tracking issue: [#8](https://github.com/yvt/try_match-rs/issues/8)
+//!
+//! [`match_ok!`] is a variation of [`try_match!`] that returns `Option`.
+//! Examples:
+//!
+//! ```rust
+//! # {
+//! #![cfg(feature = "unstable")]
+//! # use try_match::match_ok;
+//! # #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
+//! # use Enum::{Var1, Var2};
+//! assert_eq!(match_ok!(Var1(42), Var1(x)), Some(42));
+//! assert_eq!(match_ok!(Var1(42), Var1(x) if x < 20), None);
+//! # }
+//! ```
+//!
+//! Unlike [`try_match!`], it doesn't consume the input unless required by the
+//! pattern (cf. examples in [Input Ownership](#input-ownership)):
+//!
+//! ```rust
+//! # {
+//! # #![cfg(feature = "unstable")]
+//! # use try_match::match_ok;
+//! #[derive(Debug)] struct UncopyValue;
+//! let array = [Some(UncopyValue), None];
+//! let _: &UncopyValue = match_ok!(array[0], Some(ref x)).unwrap();
+//! # }
+//! ```
+//!
+//! It can be combined with the partial application feature:
+//!
+//! ```rust
+//! # {
+//! # #![cfg(feature = "unstable")]
+//! # use try_match::match_ok;
+//! # #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
+//! # use Enum::{Var1, Var2};
+//! let array = [Var1(42), Var2, Var1(10)];
+//! let filtered: Vec<_> = array
+//!     .iter()
+//!     .filter_map(match_ok!(, &Var1(_0) if _0 > 20))
+//!     .collect();
+//!
+//! assert_eq!(filtered, [42]);
+//! # }
+//! ```
+//!
+//! ```rust
+//! # {
+//! # #![cfg(feature = "unstable")]
+//! # use if_rust_version::if_rust_version;
+//! if_rust_version! { >= 1.63 {
+//!     # use try_match::match_ok;
+//!     use std::cell::Ref;
+//!    
+//!     # #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
+//!     # use Enum::{Var1, Var2};
+//!     fn ref_var1<T>(re: Ref<'_, Enum<T>>) -> Option<Ref<'_, T>> {
+//!         Ref::filter_map(re, match_ok!(, Var1(_0))).ok()
+//!     }
+//! } }
+//! # }
+//! ```
+//!
+//! </details>
+//!
 //! # Quirks
 //!
 //! ## Macros Inside Patterns
@@ -271,6 +339,40 @@ macro_rules! try_match {
         $crate::assert_unstable!(
             ["partial application"]
             |scrutinee| $crate::try_match!(scrutinee, $($pattern_and_rest)*)
+        )
+    }
+}
+
+/// Try to match `$in` against a given pattern `$p`. Produces `Some($out)` if
+/// successful; `None` otherwise.
+///
+/// `=> $out` can be left out, in which case it's implied by the same rules
+/// as those used by [`try_match!`].
+///
+/// See [the crate-level documentation](index.html) for examples.
+#[cfg(feature = "unstable")]
+#[macro_export]
+macro_rules! match_ok {
+    ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? => $out:expr) => {
+        match $in {
+            $($p)|+ $(if $guard)? => ::core::option::Option::Some($out),
+            in_value => ::core::option::Option::None,
+        }
+    };
+
+    ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)?) => {
+        $crate::implicit_try_match!(
+            $in,
+            $($p)|+ $(if $guard)?,
+            { _ => ::core::result::Result::Err(()) }
+        ).ok()
+    };
+
+    // Partial application (requires `unstable` Cargo feature)
+    (, $($pattern_and_rest:tt)*) => {
+        $crate::assert_unstable!(
+            ["partial application"]
+            |scrutinee| $crate::match_ok!(scrutinee, $($pattern_and_rest)*)
         )
     }
 }
