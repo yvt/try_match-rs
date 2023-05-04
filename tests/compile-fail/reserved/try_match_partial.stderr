@@ -1,7 +1,0 @@
-error: partial application requires `unstable` Cargo feature
- --> tests/compile-fail/reserved/try_match_partial.rs:4:13
-  |
-4 |     let _ = try_match::try_match!(, Some(_0))(Some(42));
-  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  |
-  = note: this error originates in the macro `$crate::assert_unstable` which comes from the expansion of the macro `try_match::try_match` (in Nightly builds, run with -Z macro-backtrace for more info)

@@ -33,6 +33,10 @@ assert_eq!((a, b), (12, 34));
 // An optional `=>` clause specifies an explicit mapping
 assert_eq!(try_match!(Var1(42),    Var1(x) => x + 1), Ok(43));
 assert_eq!(try_match!(Var2::<u32>, Var2    => "yay"), Ok("yay"));
+
+// Omit the scrutinee expression to produce a closure (partial application)
+let _:                  Result<i32, _> = try_match!(Var1(42), Var1(x));
+let _: fn(Enum<i32>) -> Result<i32, _> = try_match!(        , Var1(x));
 ```
 
 ## Applications
@@ -54,7 +58,7 @@ assert_eq!(filtered, [42]);
 let array = [Var1(42), Var2, Var1(10)];
 let filtered: Result<Vec<_>, _> = array
     .iter()
-    .map(|x| try_match!(x, &Var1(_0) if _0 > 20))
+    .map(try_match!(, &Var1(_0) if _0 > 20))
     .collect();
 
 // `Var2` is the first value that doesn't match
