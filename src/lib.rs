@@ -262,6 +262,7 @@
 //! ```
 //!
 //! ```rust,should_panic
+//! # if !cfg!(feature = "unstable") { panic!("..."); }
 //! # {
 //! # #![cfg(feature = "unstable")]
 //! # use try_match::unwrap_match;
@@ -310,8 +311,8 @@
 //! ## Macros Inside Patterns
 //!
 //! When using implicit mapping, bind variables defined inside macros are
-//! not recognized because at the point of `try_match`'s macro expansion,
-//! inner macros are not expended yet.
+//! not recognized because, at the point of `try_match`'s macro expansion,
+//! these macros are not expanded yet.
 //!
 //! ## Input Ownership
 //!
@@ -369,6 +370,13 @@
 /// Try to match `$in` against a given pattern `$p`. Produces `Ok($out)` if
 /// successful; `Err($in)` otherwise.
 ///
+/// ```rust,ignore
+/// try_match!($in:expr, $p:pat_multi $( if $guard:expr )? $( => $out:expr )?)
+///
+/// #[cfg(feature = "unstable")]
+/// try_match!(, $p:pat_multi $( if $guard:expr )? $( => $out:expr )?)
+/// ```
+///
 /// `=> $out` can be left out, in which case it's implied based on the number of
 /// bound variables in `$p`:
 ///
@@ -379,7 +387,10 @@
 ///
 /// `AnonymousType` implements `Clone`, `Copy`, and `Debug`.
 ///
-/// See [the crate-level documentation](index.html) for examples.
+/// `$in` can be left out to produce a closure (requires `unstable` Cargo
+/// feature).
+///
+/// See [the crate-level documentation](crate#basic-usage) for examples.
 #[macro_export]
 macro_rules! try_match {
     ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? => $out:expr) => {
@@ -410,10 +421,16 @@ macro_rules! try_match {
 /// Try to match `$in` against a given pattern `$p`. Produces `Some($out)` if
 /// successful; `None` otherwise.
 ///
-/// `=> $out` can be left out, in which case it's implied by the same rules
-/// as those used by [`try_match!`].
+/// ```rust,ignore
+/// match_ok!($( $in:expr )?, $p:pat_multi $( if $guard:expr )? $( => $out:expr )?)
+/// ```
 ///
-/// See [the crate-level documentation](index.html) for examples.
+/// `=> $out` can be left out, in which case it's implied in the same way as
+/// [`try_match!`].
+///
+/// `$in` can be left out to produce a closure.
+///
+/// See [the crate-level documentation](crate#unstable-features) for examples.
 #[cfg(feature = "unstable")]
 #[cfg_attr(feature = "_doc_cfg", doc(cfg(feature = "unstable")))]
 #[macro_export]
@@ -445,10 +462,22 @@ macro_rules! match_ok {
 
 /// Try to match `$in` against a given pattern `$p`. Panics on failure.
 ///
-/// `=> $out` can be left out, in which case it's implied by the same rules
-/// as those used by [`try_match!`].
+/// ```rust,ignore
+/// unwrap_match!(
+///     $( $in:expr )?,
+///     $p:pat_multi $( if $guard:expr )? $( => $out:expr )?
+///     // An optional panic message to replace the default one;
+///     // removes the `$in: Debug` requirement
+///     $( , $( $( $panic_args:tt )+ $( , )? )? )?
+/// )
+/// ```
 ///
-/// See [the crate-level documentation](index.html) for examples.
+/// `=> $out` can be left out, in which case it's implied in the same way as
+/// [`try_match!`].
+///
+/// `$in` can be left out to produce a closure.
+///
+/// See [the crate-level documentation](crate#unstable-features) for examples.
 #[cfg(feature = "unstable")]
 #[cfg_attr(feature = "_doc_cfg", doc(cfg(feature = "unstable")))]
 #[macro_export]
