@@ -243,6 +243,68 @@
 //!
 //! </details>
 //!
+//! <details><summary><h3>Panicking macro</h3></summary>
+//!
+//! Tracking issue: [#5](https://github.com/yvt/try_match-rs/issues/5)
+//!
+//! [`unwrap_match!`] is a variation of [`try_match!`] that panics on match
+//! failure.
+//! Examples:
+//!
+//! ```rust
+//! # {
+//! #![cfg(feature = "unstable")]
+//! # use try_match::unwrap_match;
+//! # #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
+//! # use Enum::{Var1, Var2};
+//! assert_eq!(unwrap_match!(Var1(42), Var1(x)), 42);
+//! # }
+//! ```
+//!
+//! ```rust,should_panic
+//! # {
+//! # #![cfg(feature = "unstable")]
+//! # use try_match::unwrap_match;
+//! # #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
+//! # use Enum::{Var1, Var2};
+//! unwrap_match!(Var1(10), Var1(x) if x > 20, "oops");
+//! # }
+//! # if !cfg!(feature = "unstable") { panic!("..."); }
+//! ```
+//!
+//! Unlike [`try_match!`], it doesn't consume the input unless required by the
+//! pattern (cf. examples in [Input Ownership](#input-ownership)):
+//!
+//! ```rust
+//! # {
+//! # #![cfg(feature = "unstable")]
+//! # use try_match::unwrap_match;
+//! #[derive(Debug)] struct UncopyValue;
+//! let array = [Some(UncopyValue), None];
+//! let _: &UncopyValue = unwrap_match!(array[0], Some(ref x));
+//! # }
+//! ```
+//!
+//! It can be combined with the partial application feature:
+//!
+//! ```rust
+//! # {
+//! # #![cfg(feature = "unstable")]
+//! # use try_match::unwrap_match;
+//! # #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
+//! # use Enum::{Var1, Var2};
+//! let array = [Var1(42)];
+//! let filtered: Vec<_> = array
+//!     .iter()
+//!     .map(unwrap_match!(, &Var1(_0) if _0 > 20))
+//!     .collect();
+//!
+//! assert_eq!(filtered, [42]);
+//! # }
+//! ```
+//!
+//! </details>
+//!
 //! # Quirks
 //!
 //! ## Macros Inside Patterns
@@ -381,6 +443,54 @@ macro_rules! match_ok {
     }
 }
 
+/// Try to match `$in` against a given pattern `$p`. Panics on failure.
+///
+/// `=> $out` can be left out, in which case it's implied by the same rules
+/// as those used by [`try_match!`].
+///
+/// See [the crate-level documentation](index.html) for examples.
+#[cfg(feature = "unstable")]
+#[cfg_attr(feature = "_doc_cfg", doc(cfg(feature = "unstable")))]
+#[macro_export]
+macro_rules! unwrap_match {
+    ($($in:expr)?, $(|)? $($p:pat)|+ $(if $guard:expr)? $( => $out:expr)?) => {
+        // Add a trailing comma
+        $crate::unwrap_match!($($in)?, $($p)|+ $(if $guard)? $( => $out)? ,)
+    };
+
+    ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? => $out:expr, $($panic_arg:tt)*) => {
+        match $in {
+            $($p)|+ $(if $guard)? => $out,
+            ref in_val => $crate::unwrap_failed!(
+                { in_val }
+                { $($p)|+ $(if $guard)? }
+                { $($panic_arg)* }
+            ),
+        }
+    };
+
+    ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)?, $($panic_arg:tt)*) => {
+        $crate::implicit_try_match!(
+            $in,
+            $($p)|+ $(if $guard)?,
+            {}
+            { ref in_val => $crate::unwrap_failed!(
+                { in_val }
+                { $($p)|+ $(if $guard)? }
+                { $($panic_arg)* }
+            ) }
+        )
+    };
+
+    // Partial application (requires `unstable` Cargo feature)
+    (, $($pattern_and_rest:tt)* ) => {
+        $crate::assert_unstable!(
+            ["partial application"]
+            |scrutinee| $crate::unwrap_match!(scrutinee, $($pattern_and_rest)*)
+        )
+    }
+}
+
 #[cfg(feature = "implicit_map")]
 #[macro_export]
 #[doc(hidden)]
@@ -418,6 +528,38 @@ macro_rules! assert_unstable {
     ([$($msg:tt)*] $($tt:tt)*) => {
         compile_error!(concat!($($msg)*, " requires `unstable` Cargo feature"))
     }
+}
+
+#[cfg(feature = "unstable")]
+#[macro_export]
+#[doc(hidden)]
+macro_rules! unwrap_failed {
+    (
+        { $in_val:tt } { $($pat:tt)* } { $(,)? }
+    ) => {
+        $crate::unwrap_failed($in_val, $crate::stringify!($($pat)*))
+    };
+    (
+        $in_val:tt $pat:tt { $($arg:tt)* }
+    ) => {
+        $crate::panic!($($arg)*)
+    };
+}
+
+// used by `unwrap_failed!`
+#[cfg(feature = "unstable")]
+#[doc(hidden)]
+pub use core::{panic, stringify};
+
+#[cfg(feature = "unstable")]
+#[cold]
+#[track_caller]
+#[doc(hidden)]
+pub fn unwrap_failed(in_val: &(impl core::fmt::Debug + ?Sized), pattern: &str) -> ! {
+    panic!(
+        "assertion failed: '{:?}' does not match '{}'",
+        in_val, pattern
+    );
 }
 
 /// Pattern: `$p:pat`

@@ -193,3 +193,47 @@ fn unwrap_result() {
     assert_eq!(try_match!(Ok::<_, &_>(42), Ok(_0) | Err(&_0)), Ok(42));
     assert_eq!(try_match!(Err::<&_, _>(42), Ok(&_0) | Err(_0)), Ok(42));
 }
+
+#[cfg(feature = "implicit_map")]
+#[cfg(feature = "unstable")]
+#[test]
+#[should_panic = "assertion failed: '42' does not match 'x if x < 20'"]
+fn unwrap_match_msg_default1() {
+    try_match::unwrap_match!(42, x if x < 20);
+}
+
+#[cfg(feature = "implicit_map")]
+#[cfg(feature = "unstable")]
+#[test]
+#[should_panic = "assertion failed: '42' does not match 'x if x < 20'"]
+fn unwrap_match_msg_default2() {
+    try_match::unwrap_match!(42, x if x < 20,);
+}
+
+#[cfg(feature = "unstable")]
+#[test]
+#[should_panic = "assertion failed: '42' does not match 'x if x < 20'"]
+fn unwrap_match_msg_default3() {
+    try_match::unwrap_match!(42, x if x < 20 => ());
+}
+
+#[cfg(feature = "unstable")]
+#[test]
+#[should_panic = "assertion failed: '42' does not match 'x if x < 20'"]
+fn unwrap_match_msg_default4() {
+    try_match::unwrap_match!(42, x if x < 20 => (),);
+}
+
+#[cfg(feature = "unstable")]
+#[test]
+#[should_panic = "poneyland"]
+fn unwrap_match_msg1() {
+    try_match::unwrap_match!(42, x if x < 20 => (), "poney{}", "land");
+}
+
+#[cfg(feature = "unstable")]
+#[test]
+#[should_panic = "poneyland"]
+fn unwrap_match_msg2() {
+    try_match::unwrap_match!(42, x if x < 20 => (), "poney{}", "land",);
+}
