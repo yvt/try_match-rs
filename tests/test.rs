@@ -23,6 +23,7 @@ fn pat_paren_implicit_map() {
 
 #[cfg(feature = "implicit_map")]
 #[test]
+#[allow(warnings)]
 fn ident_inside_types() {
     trait Tr {
         const C: () = ();
@@ -36,7 +37,6 @@ fn ident_inside_types() {
         try_match!(
             (),
             <[(); {
-                #[allow(warnings)]
                 match () {
                     // `_4` is a `Pat::Ident`, but `try_match!` should not
                     // consider it as a part of the input pattern
