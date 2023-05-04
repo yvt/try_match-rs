@@ -371,10 +371,10 @@
 /// successful; `Err($in)` otherwise.
 ///
 /// ```rust,ignore
-/// try_match!($in:expr, $p:pat_multi $( if $guard:expr )? $( => $out:expr )?)
+/// try_match!($in:expr, $p:pat_multi $( if $guard:expr )? $( => $out:expr )? $( , )?)
 ///
 /// #[cfg(feature = "unstable")]
-/// try_match!(, $p:pat_multi $( if $guard:expr )? $( => $out:expr )?)
+/// try_match!(, $p:pat_multi $( if $guard:expr )? $( => $out:expr )? $( , )?)
 /// ```
 ///
 /// `=> $out` can be left out, in which case it's implied based on the number of
@@ -393,14 +393,14 @@
 /// See [the crate-level documentation](crate#basic-usage) for examples.
 #[macro_export]
 macro_rules! try_match {
-    ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? => $out:expr) => {
+    ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? => $out:expr $(,)?) => {
         match $in {
             $($p)|+ $(if $guard)? => ::core::result::Result::Ok($out),
             in_value => ::core::result::Result::Err(in_value),
         }
     };
 
-    ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)?) => {
+    ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? $(,)?) => {
         $crate::implicit_try_match!(
             $in,
             $($p)|+ $(if $guard)?,
@@ -422,7 +422,7 @@ macro_rules! try_match {
 /// successful; `None` otherwise.
 ///
 /// ```rust,ignore
-/// match_ok!($( $in:expr )?, $p:pat_multi $( if $guard:expr )? $( => $out:expr )?)
+/// match_ok!($( $in:expr )?, $p:pat_multi $( if $guard:expr )? $( => $out:expr )? $( , )?)
 /// ```
 ///
 /// `=> $out` can be left out, in which case it's implied in the same way as
@@ -435,14 +435,14 @@ macro_rules! try_match {
 #[cfg_attr(feature = "_doc_cfg", doc(cfg(feature = "unstable")))]
 #[macro_export]
 macro_rules! match_ok {
-    ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? => $out:expr) => {
+    ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? => $out:expr $(,)?) => {
         match $in {
             $($p)|+ $(if $guard)? => ::core::option::Option::Some($out),
             _ => ::core::option::Option::None,
         }
     };
 
-    ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)?) => {
+    ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? $(,)?) => {
         $crate::implicit_try_match!(
             $in,
             $($p)|+ $(if $guard)?,

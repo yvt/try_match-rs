@@ -115,6 +115,44 @@ fn pat_ident_guessed_constant_implicit_map() {
 }
 
 #[test]
+fn trailing_comma() {
+    assert_eq!(try_match!(Some(12), Some(a) => a,), Ok(12));
+    assert_eq!(try_match!(Some(12), Some(a) if a < 20 => a,), Ok(12));
+}
+
+#[cfg(feature = "implicit_map")]
+#[test]
+fn trailing_comma_implicit_map() {
+    assert_eq!(try_match!(Some(12), Some(a),), Ok(12));
+    assert_eq!(try_match!(Some(12), Some(a) if a < 20,), Ok(12));
+}
+
+#[cfg(feature = "unstable")]
+#[test]
+fn trailing_comma_unstable() {
+    assert_eq!(try_match::match_ok!(Some(12), Some(a) => a,), Some(12));
+    assert_eq!(
+        try_match::match_ok!(Some(12), Some(a) if a < 20 => a,),
+        Some(12)
+    );
+    assert_eq!(try_match::unwrap_match!(Some(12), Some(a) => a,), 12);
+    assert_eq!(
+        try_match::unwrap_match!(Some(12), Some(a) if a < 20 => a,),
+        12
+    );
+}
+
+#[cfg(feature = "implicit_map")]
+#[cfg(feature = "unstable")]
+#[test]
+fn trailing_comma_implicit_map_unstable() {
+    assert_eq!(try_match::match_ok!(Some(12), Some(a),), Some(12));
+    assert_eq!(try_match::match_ok!(Some(12), Some(a) if a < 20,), Some(12));
+    assert_eq!(try_match::unwrap_match!(Some(12), Some(a),), 12);
+    assert_eq!(try_match::unwrap_match!(Some(12), Some(a) if a < 20,), 12);
+}
+
+#[test]
 fn guards() {
     assert_eq!(try_match!(Some(12), Some(a) if a < 20 => a), Ok(12));
     assert_eq!(try_match!(Some(42), Some(a) if a < 20 => a), Err(Some(42)));
