@@ -1,6 +1,6 @@
 extern crate core as abcdefgh;
 extern crate std as ijklmn;
-use try_match::try_match;
+use try_match::{match_ok, try_match, unwrap_match};
 
 #[test]
 fn input_evaled_only_once() {
@@ -118,6 +118,10 @@ fn pat_ident_guessed_constant_implicit_map() {
 fn trailing_comma() {
     assert_eq!(try_match!(Some(12), Some(a) => a,), Ok(12));
     assert_eq!(try_match!(Some(12), Some(a) if a < 20 => a,), Ok(12));
+    assert_eq!(match_ok!(Some(12), Some(a) => a,), Some(12));
+    assert_eq!(match_ok!(Some(12), Some(a) if a < 20 => a,), Some(12));
+    assert_eq!(unwrap_match!(Some(12), Some(a) => a,), 12);
+    assert_eq!(unwrap_match!(Some(12), Some(a) if a < 20 => a,), 12);
 }
 
 #[cfg(feature = "implicit_map")]
@@ -125,31 +129,10 @@ fn trailing_comma() {
 fn trailing_comma_implicit_map() {
     assert_eq!(try_match!(Some(12), Some(a),), Ok(12));
     assert_eq!(try_match!(Some(12), Some(a) if a < 20,), Ok(12));
-}
-
-#[cfg(feature = "unstable")]
-#[test]
-fn trailing_comma_unstable() {
-    assert_eq!(try_match::match_ok!(Some(12), Some(a) => a,), Some(12));
-    assert_eq!(
-        try_match::match_ok!(Some(12), Some(a) if a < 20 => a,),
-        Some(12)
-    );
-    assert_eq!(try_match::unwrap_match!(Some(12), Some(a) => a,), 12);
-    assert_eq!(
-        try_match::unwrap_match!(Some(12), Some(a) if a < 20 => a,),
-        12
-    );
-}
-
-#[cfg(feature = "implicit_map")]
-#[cfg(feature = "unstable")]
-#[test]
-fn trailing_comma_implicit_map_unstable() {
-    assert_eq!(try_match::match_ok!(Some(12), Some(a),), Some(12));
-    assert_eq!(try_match::match_ok!(Some(12), Some(a) if a < 20,), Some(12));
-    assert_eq!(try_match::unwrap_match!(Some(12), Some(a),), 12);
-    assert_eq!(try_match::unwrap_match!(Some(12), Some(a) if a < 20,), 12);
+    assert_eq!(match_ok!(Some(12), Some(a),), Some(12));
+    assert_eq!(match_ok!(Some(12), Some(a) if a < 20,), Some(12));
+    assert_eq!(unwrap_match!(Some(12), Some(a),), 12);
+    assert_eq!(unwrap_match!(Some(12), Some(a) if a < 20,), 12);
 }
 
 #[test]
@@ -233,45 +216,39 @@ fn unwrap_result() {
 }
 
 #[cfg(feature = "implicit_map")]
-#[cfg(feature = "unstable")]
 #[test]
 #[should_panic = "assertion failed: '42' does not match 'x if x < 20'"]
 fn unwrap_match_msg_default1() {
-    try_match::unwrap_match!(42, x if x < 20);
+    unwrap_match!(42, x if x < 20);
 }
 
 #[cfg(feature = "implicit_map")]
-#[cfg(feature = "unstable")]
 #[test]
 #[should_panic = "assertion failed: '42' does not match 'x if x < 20'"]
 fn unwrap_match_msg_default2() {
-    try_match::unwrap_match!(42, x if x < 20,);
+    unwrap_match!(42, x if x < 20,);
 }
 
-#[cfg(feature = "unstable")]
 #[test]
 #[should_panic = "assertion failed: '42' does not match 'x if x < 20'"]
 fn unwrap_match_msg_default3() {
-    try_match::unwrap_match!(42, x if x < 20 => ());
+    unwrap_match!(42, x if x < 20 => ());
 }
 
-#[cfg(feature = "unstable")]
 #[test]
 #[should_panic = "assertion failed: '42' does not match 'x if x < 20'"]
 fn unwrap_match_msg_default4() {
-    try_match::unwrap_match!(42, x if x < 20 => (),);
+    unwrap_match!(42, x if x < 20 => (),);
 }
 
-#[cfg(feature = "unstable")]
 #[test]
 #[should_panic = "poneyland"]
 fn unwrap_match_msg1() {
-    try_match::unwrap_match!(42, x if x < 20 => (), "poney{}", "land");
+    unwrap_match!(42, x if x < 20 => (), "poney{}", "land");
 }
 
-#[cfg(feature = "unstable")]
 #[test]
 #[should_panic = "poneyland"]
 fn unwrap_match_msg2() {
-    try_match::unwrap_match!(42, x if x < 20 => (), "poney{}", "land",);
+    unwrap_match!(42, x if x < 20 => (), "poney{}", "land",);
 }

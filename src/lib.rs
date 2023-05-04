@@ -1,7 +1,50 @@
-//! Provides an expression macro `try_match` that matches a pattern on a given
-//! expression and returns the bound variables in `Ok(_)` if successful.
+//! Provides expression macros to match a pattern on a given expression.
 //!
 //! # Basic Usage
+//!
+//! ## Macros
+//!
+//! [`try_match!`] returns [`Result`]: `Ok(bindings)` on success or
+//! `Err(input)` on failure:
+//!
+//! ```rust
+//! # use try_match::try_match;
+//! # #[derive(Copy, Clone, Debug, PartialEq)]
+//! # enum Enum<T> { Var1(T), Var2 }
+//! # use Enum::{Var1, Var2};
+//! assert_eq!(try_match!(Var1(42), Var1(x)), Ok(42));
+//! assert_eq!(try_match!(Var1(42), Var1(x) if x < 20), Err(Var1(42)));
+//! ```
+//!
+//! [`match_ok!`] returns [`Option`]: `Some(bindings)` on success or
+//! `None` on failure:
+//!
+//! ```rust
+//! # use try_match::match_ok;
+//! # #[derive(Copy, Clone, Debug, PartialEq)]
+//! # enum Enum<T> { Var1(T), Var2 }
+//! # use Enum::{Var1, Var2};
+//! assert_eq!(match_ok!(Var1(42), Var1(x)), Some(42));
+//! assert_eq!(match_ok!(Var1(42), Var1(x) if x < 20), None);
+//! ```
+//!
+//! [`unwrap_match!`] panics on failure:
+//!
+//! ```rust
+//! # use try_match::unwrap_match;
+//! # #[derive(Copy, Clone, Debug, PartialEq)]
+//! # enum Enum<T> { Var1(T), Var2 }
+//! # use Enum::{Var1, Var2};
+//! assert_eq!(unwrap_match!(Var1(42), Var1(x)), 42);
+//! ```
+//!  
+//! ```rust,should_panic
+//! # use try_match::unwrap_match;
+//! # #[derive(Copy, Clone, Debug, PartialEq)]
+//! # enum Enum<T> { Var1(T), Var2 }
+//! # use Enum::{Var1, Var2};
+//! unwrap_match!(Var1(42), Var1(x) if x < 20);
+//! ```
 //!
 //! ## Explicit Mapping
 //!
@@ -163,136 +206,7 @@
 //!
 //! *Requires `unstable` Cargo feature, exempt from semver guarantees.*
 //!
-//! <details><summary><h3><code>Option</code>-returning Macro</h3></summary>
-//!
-//! Tracking issue: [#8](https://github.com/yvt/try_match-rs/issues/8)
-//!
-//! [`match_ok!`] is a variation of [`try_match!`] that returns `Option`.
-//! Examples:
-//!
-//! ```rust
-//! # {
-//! #![cfg(feature = "unstable")]
-//! # use try_match::match_ok;
-//! # #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
-//! # use Enum::{Var1, Var2};
-//! assert_eq!(match_ok!(Var1(42), Var1(x)), Some(42));
-//! assert_eq!(match_ok!(Var1(42), Var1(x) if x < 20), None);
-//! # }
-//! ```
-//!
-//! Unlike [`try_match!`], it doesn't consume the input unless required by the
-//! pattern (cf. examples in [Input Ownership](#input-ownership)):
-//!
-//! ```rust
-//! # {
-//! # #![cfg(feature = "unstable")]
-//! # use try_match::match_ok;
-//! #[derive(Debug)] struct UncopyValue;
-//! let array = [Some(UncopyValue), None];
-//! let _: &UncopyValue = match_ok!(array[0], Some(ref x)).unwrap();
-//! # }
-//! ```
-//!
-//! It can be combined with the partial application feature:
-//!
-//! ```rust
-//! # {
-//! # #![cfg(feature = "unstable")]
-//! # use try_match::match_ok;
-//! # #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
-//! # use Enum::{Var1, Var2};
-//! let array = [Var1(42), Var2, Var1(10)];
-//! let filtered: Vec<_> = array
-//!     .iter()
-//!     .filter_map(match_ok!(, &Var1(_0) if _0 > 20))
-//!     .collect();
-//!
-//! assert_eq!(filtered, [42]);
-//! # }
-//! ```
-//!
-//! ```rust
-//! # {
-//! # #![cfg(feature = "unstable")]
-//! # use if_rust_version::if_rust_version;
-//! if_rust_version! { >= 1.63 {
-//!     # use try_match::match_ok;
-//!     use std::cell::Ref;
-//!    
-//!     # #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
-//!     # use Enum::{Var1, Var2};
-//!     fn ref_var1<T>(re: Ref<'_, Enum<T>>) -> Option<Ref<'_, T>> {
-//!         Ref::filter_map(re, match_ok!(, Var1(_0))).ok()
-//!     }
-//! } }
-//! # }
-//! ```
-//!
-//! </details>
-//!
-//! <details><summary><h3>Panicking macro</h3></summary>
-//!
-//! Tracking issue: [#5](https://github.com/yvt/try_match-rs/issues/5)
-//!
-//! [`unwrap_match!`] is a variation of [`try_match!`] that panics on match
-//! failure.
-//! Examples:
-//!
-//! ```rust
-//! # {
-//! #![cfg(feature = "unstable")]
-//! # use try_match::unwrap_match;
-//! # #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
-//! # use Enum::{Var1, Var2};
-//! assert_eq!(unwrap_match!(Var1(42), Var1(x)), 42);
-//! # }
-//! ```
-//!
-//! ```rust,should_panic
-//! # if !cfg!(feature = "unstable") { panic!("..."); }
-//! # {
-//! # #![cfg(feature = "unstable")]
-//! # use try_match::unwrap_match;
-//! # #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
-//! # use Enum::{Var1, Var2};
-//! unwrap_match!(Var1(10), Var1(x) if x > 20, "oops");
-//! # }
-//! # if !cfg!(feature = "unstable") { panic!("..."); }
-//! ```
-//!
-//! Unlike [`try_match!`], it doesn't consume the input unless required by the
-//! pattern (cf. examples in [Input Ownership](#input-ownership)):
-//!
-//! ```rust
-//! # {
-//! # #![cfg(feature = "unstable")]
-//! # use try_match::unwrap_match;
-//! #[derive(Debug)] struct UncopyValue;
-//! let array = [Some(UncopyValue), None];
-//! let _: &UncopyValue = unwrap_match!(array[0], Some(ref x));
-//! # }
-//! ```
-//!
-//! It can be combined with the partial application feature:
-//!
-//! ```rust
-//! # {
-//! # #![cfg(feature = "unstable")]
-//! # use try_match::unwrap_match;
-//! # #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
-//! # use Enum::{Var1, Var2};
-//! let array = [Var1(42)];
-//! let filtered: Vec<_> = array
-//!     .iter()
-//!     .map(unwrap_match!(, &Var1(_0) if _0 > 20))
-//!     .collect();
-//!
-//! assert_eq!(filtered, [42]);
-//! # }
-//! ```
-//!
-//! </details>
+//! No unstable features are defined in this version.
 //!
 //! # Quirks
 //!
@@ -304,7 +218,7 @@
 //!
 //! ## Input Ownership
 //!
-//! This macro moves a value out of the place represented by the input
+//! [`try_match!`] moves a value out of the place represented by the input
 //! expression to return it on failure. Make sure to pass a reference if this is
 //! not desired.
 //!
@@ -321,6 +235,22 @@
 //! # #[derive(Debug)] struct UncopyValue;
 //! # let array = [Some(UncopyValue), None];
 //! let _: &UncopyValue = try_match!(&array[0], Some(x)).unwrap();
+//! ```
+//!
+//! [`match_ok!`] and [`unwrap_match!`] do not have this issue:
+//!
+//! ```rust
+//! # use try_match::match_ok;
+//! #[derive(Debug)] struct UncopyValue;
+//! let array = [Some(UncopyValue), None];
+//! let _: &UncopyValue = match_ok!(array[0], Some(ref x)).unwrap();
+//! ```
+//!
+//! ```rust
+//! # use try_match::unwrap_match;
+//! #[derive(Debug)] struct UncopyValue;
+//! let array = [Some(UncopyValue), None];
+//! let _: &UncopyValue = unwrap_match!(array[0], Some(ref x));
 //! ```
 //!
 //! ## Binding/Constant Disambiguation
@@ -413,9 +343,7 @@ macro_rules! try_match {
 /// `$in` can be left out to produce a closure ([partial
 /// application](crate#partial-application)).
 ///
-/// See [the crate-level documentation](crate#unstable-features) for examples.
-#[cfg(feature = "unstable")]
-#[cfg_attr(feature = "_doc_cfg", doc(cfg(feature = "unstable")))]
+/// See [the crate-level documentation](crate#basic-usage) for examples.
 #[macro_export]
 macro_rules! match_ok {
     ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? => $out:expr $(,)?) => {
@@ -458,9 +386,7 @@ macro_rules! match_ok {
 /// `$in` can be left out to produce a closure ([partial
 /// application](crate#partial-application)).
 ///
-/// See [the crate-level documentation](crate#unstable-features) for examples.
-#[cfg(feature = "unstable")]
-#[cfg_attr(feature = "_doc_cfg", doc(cfg(feature = "unstable")))]
+/// See [the crate-level documentation](crate#basic-usage) for examples.
 #[macro_export]
 macro_rules! unwrap_match {
     ($($in:expr)?, $(|)? $($p:pat)|+ $(if $guard:expr)? $( => $out:expr)?) => {
@@ -519,7 +445,6 @@ macro_rules! implicit_try_match {
     };
 }
 
-#[cfg(feature = "unstable")]
 #[macro_export]
 #[doc(hidden)]
 macro_rules! unwrap_failed {
@@ -536,11 +461,9 @@ macro_rules! unwrap_failed {
 }
 
 // used by `unwrap_failed!`
-#[cfg(feature = "unstable")]
 #[doc(hidden)]
 pub use core::{panic, stringify};
 
-#[cfg(feature = "unstable")]
 #[cold]
 #[track_caller]
 #[doc(hidden)]
