@@ -30,6 +30,7 @@ struct MacroInput {
     in_value: Expr,
     pat: Pat,
     guard: Option<(Token![if], Box<Expr>)>,
+    wrap_output_fn: proc_macro2::TokenStream,
     fallback_arm: proc_macro2::TokenStream,
 }
 
@@ -50,12 +51,14 @@ impl Parse for MacroInput {
 
         input.parse::<Token![,]>()?;
 
+        let wrap_output_fn = input.parse::<proc_macro2::Group>()?.stream();
         let fallback_arm = input.parse::<proc_macro2::Group>()?.stream();
 
         Ok(Self {
             pat,
             in_value,
             guard,
+            wrap_output_fn,
             fallback_arm,
         })
     }
@@ -67,6 +70,7 @@ pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
         mut pat,
         in_value,
         guard,
+        wrap_output_fn,
         fallback_arm,
     } = parse_macro_input!(input);
 
@@ -192,7 +196,7 @@ pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
     let output = quote! {
         match #in_value {
             #allow_redundant_pattern
-            #pat #guard => ::core::result::Result::Ok(#success_output),
+            #pat #guard => #wrap_output_fn(#success_output),
             #fallback_arm
         }
     };

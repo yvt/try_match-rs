@@ -331,6 +331,7 @@ macro_rules! try_match {
         $crate::implicit_try_match!(
             $in,
             $($p)|+ $(if $guard)?,
+            { ::core::result::Result::Ok }
             { in_value => ::core::result::Result::Err(in_value) }
         )
     };
@@ -366,8 +367,9 @@ macro_rules! match_ok {
         $crate::implicit_try_match!(
             $in,
             $($p)|+ $(if $guard)?,
-            { _ => ::core::result::Result::Err(()) }
-        ).ok()
+            { ::core::option::Option::Some }
+            { _ => ::core::option::Option::None }
+        )
     };
 
     // Partial application (requires `unstable` Cargo feature)
