@@ -176,7 +176,7 @@ fn input_evaled_only_once_implicit_map() {
 
     // `A: !Copy`, so the following line should fail to compile if
     // `input` is evaluated twice
-    let _ = try_match!(input, A).unwrap();
+    unwrap_match!(input, A);
 }
 
 #[cfg(feature = "implicit_map")]
