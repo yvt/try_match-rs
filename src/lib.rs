@@ -46,46 +46,25 @@
 //! unwrap_match!(Var1(42), Var1(x) if x < 20);
 //! ```
 //!
-//! ## Explicit Mapping
+//! ## Implicit Mapping
+//!
+//! *Requires `implicit_map` Cargo feature (enabled by default)*
 //!
 //! ```
-//! use try_match::try_match;
+//! use try_match::unwrap_match;
 //!
-//! #[derive(Copy, Clone, Debug, PartialEq)]
+//! #[derive(Debug, PartialEq)]
 //! enum Enum<T> { Var1(T), Var2 }
 //! use Enum::{Var1, Var2};
 //!
-//! // The right-hand side of `=>` if successful
-//! assert_eq!(try_match!(Var1(42),    Var1(x) => x),     Ok(42));
-//! assert_eq!(try_match!(Var2::<u32>, Var2    => "yay"), Ok("yay"));
-//!
-//! // `Err(input)` on failure
-//! assert_eq!(try_match!(Var2::<u32>, Var1(x) => x),     Err(Var2));
-//! assert_eq!(try_match!(Var1(42),    Var2    => "yay"), Err(Var1(42)));
-//!
-//! // Supports `if` guard
-//! assert_eq!(try_match!(Var1(42), Var1(x) if x < 20 => x), Err(Var1(42)));
-//! ```
-//!
-//! ## Implicit Mapping
-//!
-//! `=>` and the following part can be omitted (requires `implicit_map`
-//! feature, which is enabled by default; you can disable it to skip the
-//! compilation of the internal procedural macro):
-//!
-//! ```
-//! # use try_match::try_match;
-//! # #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
-//! # use Enum::{Var1, Var2};
 //! // `()` if there are no bound variables
-//! assert_eq!(try_match!(Var1(42), Var1(_)), Ok(()));
+//! assert_eq!(unwrap_match!(Var1(42), Var1(_)), ());
 //!
 //! // The bound variable if there is exactly one bound variable
-//! assert_eq!(try_match!(Var1(42), Var1(x)), Ok(42));
-//! assert_eq!(try_match!(Var1(42), Var1(x) if x < 20), Err(Var1(42)));
+//! assert_eq!(unwrap_match!(Var1(42), Var1(x)), 42);
 //!
 //! // An anonymous struct if there are multiple bound variables
-//! let vars = try_match!(Var1((12, 34)), Var1((a, b))).unwrap();
+//! let vars = unwrap_match!(Var1((12, 34)), Var1((a, b)));
 //! assert_eq!((vars.a, vars.b), (12, 34));
 //! ```
 //!
@@ -93,22 +72,34 @@
 //! ...:
 //!
 //! ```
-//! # use try_match::try_match;
+//! # use try_match::unwrap_match;
 //! # #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
 //! # use Enum::{Var1, Var2};
-//! let (a, b) = try_match!(Var1((12, 34)), Var1((_0, _1))).unwrap();
+//! let (a, b) = unwrap_match!(Var1((12, 34)), Var1((_0, _1)));
 //! assert_eq!((a, b), (12, 34));
-//!
-//! try_match!(Var1((12, 34)), Var1((_0, _1)) if _0 == _1).unwrap_err();
 //! ```
 //!
 //! It's an error to specify non-contiguous binding indices:
 //!
 //! ```compile_fail
-//! # use try_match::try_match;
+//! # use try_match::unwrap_match;
 //! # #[derive(Debug, PartialEq)] enum Enum<T> { Var1(T), Var2 }
 //! # use Enum::{Var1, Var2};
-//! let _ = try_match!(Var1((12, 34)), Var1((_0, _2)));
+//! unwrap_match!(Var1((12, 34)), Var1((_0, _2)));
+//! ```
+//!
+//! ## Explicit Mapping
+//!
+//! An optional `=>` clause specifies an explicit output mapping:
+//!
+//! ```
+//! # use try_match::unwrap_match;
+//! # #[derive(Copy, Clone, Debug, PartialEq)]
+//! # enum Enum<T> { Var1(T), Var2 }
+//! # use Enum::{Var1, Var2};
+//! // The right-hand side of `=>` if successful
+//! assert_eq!(unwrap_match!(Var1(42),    Var1(x) => x + 1),    43);
+//! assert_eq!(unwrap_match!(Var2::<u32>, Var2    => "yay"), "yay");
 //! ```
 //!
 //! ## Partial Application
