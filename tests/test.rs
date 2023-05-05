@@ -135,6 +135,19 @@ fn trailing_comma_implicit_map() {
     assert_eq!(unwrap_match!(Some(12), Some(a) if a < 20,), 12);
 }
 
+#[cfg(feature = "implicit_map")]
+#[test]
+#[deny(clippy::just_underscores_and_digits)]
+fn clippy_just_underscores_and_digits_implicit_map() {
+    // A variable binding like `_0` usually triggers
+    // `clippy::just_underscores_and_digits`, but we specifically need this
+    // family of names for tuple implicit mapping
+    unwrap_match!(Some(12), Some(_0 @ _));
+
+    // TODO: Use `#[expect(...)]` to check that the lint is still effective in
+    // future toolchains
+}
+
 #[test]
 fn guards() {
     assert_eq!(try_match!(Some(12), Some(a) if a < 20 => a), Ok(12));

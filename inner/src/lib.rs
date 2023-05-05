@@ -4,6 +4,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
+use std::mem::replace;
 use syn::{
     parse::{Parse, ParseStream},
     parse_macro_input,
@@ -122,6 +123,34 @@ pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
         // Check if bound variables are all like `_0`, `_1`, in which case
         // collect them in a tuple
         if let Some(tokens) = bail_if_err!(check_tuple_captures(&idents)) {
+            // XXX: Suppress `clippy::just_underscores_and_digits` by
+            // introducing a macro-generated span into the patterns
+            // <https://github.com/yvt/try_match-rs/issues/2>
+            //
+            // Clippy suppresses ignore lint if `pat.span.from_expansion()`:
+            // <https://github.com/rust-lang/rust-clippy/blob/f9c1d155b4c9cad224fe96aad486993dc123c9b6/clippy_lints/src/non_expressive_names.rs#L140>
+            //
+            // `pat.span` is created by `first_token_span.to(last_token_span)`:
+            // <https://github.com/rust-lang/rust/blob/eac35583d2ffb5ed9e564dee0822c9a244058ee0/compiler/rustc_parse/src/parser/pat.rs#L463>
+            //
+            // `Span::to` returns a macro-generated one if the given `Span`s
+            // have different contexts:
+            // <https://github.com/rust-lang/rust/blob/eac35583d2ffb5ed9e564dee0822c9a244058ee0/compiler/rustc_span/src/lib.rs#L831-L842>
+            for_each_pat_ident_mut(&mut pat, &mut |pat| {
+                if let Some((_, subpat)) = &mut pat.subpat {
+                    // Wrap `subpat` with a `PatParen` so that the last token of
+                    // the pattern becomes macro-generated
+                    let old_subpat =
+                        replace(&mut **subpat, Pat::Verbatim(proc_macro2::TokenStream::default()));
+                    **subpat = Pat::Paren(syn::PatParen {
+                        attrs: Vec::new(),
+                        paren_token: syn::token::Paren::default(),
+                        pat:Box::new(old_subpat),
+                    });
+                }
+                Ok(())
+            }).expect("errors should have already been reported");
+
             tokens
         } else {
             // Decide what to do based on the number of bound variables
