@@ -308,7 +308,7 @@ macro_rules! try_match {
 
     ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? $(,)?) => {
         $crate::implicit_try_match!(
-            $in,
+            ($in),
             $($p)|+ $(if $guard)?,
             { ::core::result::Result::Ok }
             { in_value => ::core::result::Result::Err(in_value) }
@@ -346,7 +346,7 @@ macro_rules! match_ok {
 
     ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? $(,)?) => {
         $crate::implicit_try_match!(
-            $in,
+            ($in),
             $($p)|+ $(if $guard)?,
             { ::core::option::Option::Some }
             { _ => ::core::option::Option::None }
@@ -398,7 +398,7 @@ macro_rules! unwrap_match {
 
     ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)?, $($panic_arg:tt)*) => {
         $crate::implicit_try_match!(
-            $in,
+            ($in),
             $($p)|+ $(if $guard)?,
             {}
             { ref in_val => $crate::unwrap_failed!(

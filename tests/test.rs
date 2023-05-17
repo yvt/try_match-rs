@@ -164,6 +164,24 @@ fn guards_implicit_map() {
 }
 
 #[test]
+fn struct_expr() {
+    struct A {
+        _x: i32,
+    }
+    assert!(matches!(A { _x: 42 }, A { .. }));
+    assert_eq!(match_ok!(A { _x: 42 }, A { .. } => 42), Some(42));
+}
+
+#[cfg(feature = "implicit_map")]
+#[test]
+fn struct_expr_implicit_map() {
+    struct A {
+        _x: i32,
+    }
+    assert_eq!(match_ok!(A { _x: 42 }, A { .. }), Some(()));
+}
+
+#[test]
 #[allow(unused_variables)]
 #[allow(clippy::diverging_sub_expression)]
 fn return_in_guard() {
