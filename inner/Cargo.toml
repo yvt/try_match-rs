@@ -1,6 +1,6 @@
 [package]
 name = "try_match_inner"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["yvt <i@yvt.jp>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
