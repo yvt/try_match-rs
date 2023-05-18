@@ -14,7 +14,7 @@ use syn::{
 
 macro_rules! abort {
     ($span:expr, $($format:tt)+) => {{
-        return Err(syn::Error::new($span, format!($($format)+)));
+        return Err(syn::Error::new($span, format!($($format)+)).into());
     }};
 }
 
@@ -77,44 +77,21 @@ pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
 
     // Make sure all `Pat::Ident` that are variable bindings have subpatterns,
     // and the rest don't
-    let mut introduced_subpat = false;
-    bail_if_err!(for_each_pat_ident_mut(&mut pat, &mut |pat| {
-        if pat.subpat.is_some() {
-            // Definitely a variable binding and already has a subpattern
-            Ok(())
-        } else {
-            match is_likely_variable_binding(&pat.ident) {
-                // Probably a variable binding; add a wildcard subpattern
-                Some(true) => {
-                    pat.subpat = Some((
-                        syn::token::At {
-                            spans: [Span::call_site()],
-                        },
-                        Box::new(Pat::Wild(syn::PatWild {
-                            attrs: Vec::new(),
-                            underscore_token: syn::token::Underscore {
-                                spans: [Span::call_site()],
-                            },
-                        })),
-                    ));
-                    introduced_subpat = true;
-                    Ok(())
-                }
-                // Probably a constant pattern
-                Some(false) => Ok(()),
-                // Unsure; abort compilation to be safe
-                None => abort!(pat.span(), "ambiguous identifier pattern"),
-            }
-        }
-    }));
+    let mut visitor = ForceVariableBindings {
+        introduced_subpat: false,
+    };
+    bail_if_err!(pat_visit_mut::Visit::visit_pat(&mut visitor, &mut pat));
+    let ForceVariableBindings { introduced_subpat } = visitor;
 
-    let mut idents = Vec::new();
-    bail_if_err!(for_each_pat_ident(&pat, &mut |ident| {
-        if ident.subpat.is_some() {
-            idents.push(ident);
-        }
-        Ok(())
-    }));
+    // Collect identifiers
+    let mut visitor = CollectVariableBindings {
+        bindings: Vec::new(),
+    };
+    pat_visit::Visit::visit_pat(&mut visitor, &pat)
+        .expect("errors should have already been reported");
+    let CollectVariableBindings {
+        bindings: mut idents,
+    } = visitor;
 
     idents.sort_unstable_by_key(|i| &i.ident);
     idents.dedup_by_key(|i| &i.ident);
@@ -136,20 +113,8 @@ pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
             // `Span::to` returns a macro-generated one if the given `Span`s
             // have different contexts:
             // <https://github.com/rust-lang/rust/blob/eac35583d2ffb5ed9e564dee0822c9a244058ee0/compiler/rustc_span/src/lib.rs#L831-L842>
-            for_each_pat_ident_mut(&mut pat, &mut |pat| {
-                if let Some((_, subpat)) = &mut pat.subpat {
-                    // Wrap `subpat` with a `PatParen` so that the last token of
-                    // the pattern becomes macro-generated
-                    let old_subpat =
-                        replace(&mut **subpat, Pat::Verbatim(proc_macro2::TokenStream::default()));
-                    **subpat = Pat::Paren(syn::PatParen {
-                        attrs: Vec::new(),
-                        paren_token: syn::token::Paren::default(),
-                        pat:Box::new(old_subpat),
-                    });
-                }
-                Ok(())
-            }).expect("errors should have already been reported");
+            pat_visit_mut::Visit::visit_pat(&mut SuppressClippyIdentWarnings, &mut pat)
+                .expect("errors should have already been reported");
 
             tokens
         } else {
@@ -231,6 +196,91 @@ pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
     };
 
     TokenStream::from(output)
+}
+
+/// An implementation of [`pat_visit_mut::Visit`] to add subpatterns to all
+/// likely variable bindings.
+struct ForceVariableBindings {
+    introduced_subpat: bool,
+}
+
+impl pat_visit_mut::Visit for ForceVariableBindings {
+    type Error = syn::Error;
+
+    fn visit_pat_ident(&mut self, pat: &mut PatIdent) -> Result<()> {
+        if pat.subpat.is_some() {
+            // Definitely a variable binding and already has a subpattern
+            Ok(())
+        } else {
+            match is_likely_variable_binding(&pat.ident) {
+                // Probably a variable binding; add a wildcard subpattern
+                Some(true) => {
+                    pat.subpat = Some((
+                        syn::token::At {
+                            spans: [Span::call_site()],
+                        },
+                        Box::new(Pat::Wild(syn::PatWild {
+                            attrs: Vec::new(),
+                            underscore_token: syn::token::Underscore {
+                                spans: [Span::call_site()],
+                            },
+                        })),
+                    ));
+                    self.introduced_subpat = true;
+                    Ok(())
+                }
+                // Probably a constant pattern
+                Some(false) => Ok(()),
+                // Unsure; abort compilation to be safe
+                None => abort!(pat.span(), "ambiguous identifier pattern"),
+            }
+        }
+    }
+}
+
+/// An implementation of [`pat_visit::Visit`] to collect variable bindings,
+/// assuming they have been processed by [`ForceVariableBindings`].
+struct CollectVariableBindings<'a> {
+    bindings: Vec<&'a PatIdent>,
+}
+
+impl<'a> pat_visit::Visit<'a> for CollectVariableBindings<'a> {
+    type Error = syn::Error;
+
+    fn visit_pat_ident(&mut self, pat: &'a PatIdent) -> Result<()> {
+        // `pat.subpat.is_some()` iff it's a variable binding
+        if pat.subpat.is_some() {
+            self.bindings.push(pat);
+        }
+
+        pat_visit::visit_pat_ident(self, pat)
+    }
+}
+
+/// An implementation of [`pat_visit_mut::Visit`] to suppress Clippy warnings
+/// for tuple field patterns. See the use site for the reasons behind.
+struct SuppressClippyIdentWarnings;
+
+impl pat_visit_mut::Visit for SuppressClippyIdentWarnings {
+    type Error = syn::Error;
+
+    fn visit_pat_ident(&mut self, pat: &mut PatIdent) -> Result<()> {
+        // `pat.subpat.is_some()` iff it's a variable binding
+        if let Some((_, subpat)) = &mut pat.subpat {
+            // Wrap `subpat` with a `PatParen` so that the last token of
+            // the pattern becomes macro-generated
+            let old_subpat = replace(
+                &mut **subpat,
+                Pat::Verbatim(proc_macro2::TokenStream::default()),
+            );
+            **subpat = Pat::Paren(syn::PatParen {
+                attrs: Vec::new(),
+                paren_token: syn::token::Paren::default(),
+                pat: Box::new(old_subpat),
+            });
+        }
+        Ok(())
+    }
 }
 
 /// Check if `idents` contains a tuple binding (e.g., `_4`). If it does, returns
@@ -319,82 +369,118 @@ fn check_tuple_captures(idents: &[&PatIdent]) -> Result<Option<proc_macro2::Toke
     }
 }
 
-macro_rules! define_for_each_pat_ident {
+macro_rules! define_visit_pat_trait {
     (
         #[mut($($mut:tt)*)]
         #[iter($iter:ident)]
         #[out_lifetime($($out_lifetime:tt)*)]
-        fn $ident:ident(..);
+        fn visit_pat(..);
+        ..
     ) => {
-        #[allow(clippy::needless_lifetimes)]
-        fn $ident<'a>(
+        use syn::{Pat, PatIdent, spanned::Spanned};
+
+        pub trait Visit<$($out_lifetime)*> {
+            type Error: From<syn::Error>;
+
+            fn visit_pat(
+                &mut self,
+                pat: & $($out_lifetime)* $($mut)* Pat,
+            ) -> Result<(), Self::Error> {
+                visit_pat(self, pat)
+            }
+
+            fn visit_pat_ident(
+                &mut self,
+                pat: & $($out_lifetime)* $($mut)* PatIdent,
+            ) -> Result<(), Self::Error> {
+                visit_pat_ident(self, pat)
+            }
+        }
+
+        pub fn visit_pat<'a, V: ?Sized + Visit< $($out_lifetime)* >>(
+            visit: &mut V,
             pat: &'a $($mut)* Pat,
-            out: &mut impl FnMut(&$($out_lifetime)* $($mut)* PatIdent) -> Result<()>,
-        ) -> Result<()> {
+        ) -> Result<(), V::Error> {
             match pat {
-                Pat::Const(_) => {}
-                Pat::Ident(pat) => {
-                    out(pat)?;
-                    if let Some((_, subpat)) = & $($mut)* pat.subpat {
-                        $ident(subpat, out)?;
-                    }
-                }
-                Pat::Lit(_) => {}
-                Pat::Macro(_) => {}
+                Pat::Const(_) => Ok(()),
+                Pat::Ident(pat) => visit.visit_pat_ident(pat),
+                Pat::Lit(_) => Ok(()),
+                Pat::Macro(_) => Ok(()),
                 Pat::Or(pat) => {
                     for case in pat.cases.$iter() {
-                        $ident(case, out)?;
+                        visit.visit_pat(case)?;
                     }
+                    Ok(())
                 }
-                Pat::Paren(pat) => $ident(& $($mut)* pat.pat, out)?,
-                Pat::Path(_) => {}
-                Pat::Range(_) => {}
-                Pat::Reference(pat) => $ident(& $($mut)* pat.pat, out)?,
-                Pat::Rest(_) => {}
+                Pat::Paren(pat) => visit.visit_pat(& $($mut)* pat.pat),
+                Pat::Path(_) => Ok(()),
+                Pat::Range(_) => Ok(()),
+                Pat::Reference(pat) => visit.visit_pat(& $($mut)* pat.pat),
+                Pat::Rest(_) => Ok(()),
                 Pat::Slice(pat) => {
                     for elem in pat.elems.$iter() {
-                        $ident(elem, out)?;
+                        visit.visit_pat(elem)?;
                     }
+                    Ok(())
                 }
                 Pat::Struct(pat) => {
                     for field in pat.fields.$iter() {
-                        $ident(& $($mut)* field.pat, out)?;
+                        visit.visit_pat(& $($mut)* field.pat)?;
                     }
+                    Ok(())
                 }
                 Pat::Tuple(pat) => {
                     for elem in pat.elems.$iter() {
-                        $ident(elem, out)?;
+                        visit.visit_pat(elem)?;
                     }
+                    Ok(())
                 }
                 Pat::TupleStruct(pat) => {
                     for elem in pat.elems.$iter() {
-                        $ident(elem, out)?;
+                        visit.visit_pat(elem)?;
                     }
+                    Ok(())
                 }
-                Pat::Type(pat) => $ident(& $($mut)* pat.pat, out)?,
-                Pat::Wild(_) => {}
+                Pat::Type(pat) => visit.visit_pat(& $($mut)* pat.pat),
+                Pat::Wild(_) => Ok(()),
                 // `Pat` can't be covered exhaustively.
                 // `Verbatim` is intentionally unhandled so that future additions to
                 // `Pat` won't break existing code.
                 _ => abort!(pat.span(), "unsupported pattern"),
+            }
+        }
+
+        pub fn visit_pat_ident<'a, V: ?Sized + Visit< $($out_lifetime)* >>(
+            visit: &mut V,
+            pat: &'a $($mut)* PatIdent,
+        ) -> Result<(), V::Error> {
+            if let Some((_, subpat)) = & $($mut)* pat.subpat {
+                visit.visit_pat(subpat)?;
             }
             Ok(())
         }
     }
 }
 
-define_for_each_pat_ident! {
-    #[mut()]
-    #[iter(iter)]
-    #[out_lifetime('a)]
-    fn for_each_pat_ident(..);
+mod pat_visit {
+    define_visit_pat_trait! {
+        #[mut()]
+        #[iter(iter)]
+        #[out_lifetime('a)]
+        fn visit_pat(..);
+        ..
+    }
 }
 
-define_for_each_pat_ident! {
-    #[mut(mut)]
-    #[iter(iter_mut)]
-    #[out_lifetime()]
-    fn for_each_pat_ident_mut(..);
+#[allow(clippy::needless_lifetimes)]
+mod pat_visit_mut {
+    define_visit_pat_trait! {
+        #[mut(mut)]
+        #[iter(iter_mut)]
+        #[out_lifetime()]
+        fn visit_pat(..);
+        ..
+    }
 }
 
 /// Use heuristics to determine if an [`Ident`] represents a variable binding.
