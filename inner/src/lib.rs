@@ -236,6 +236,22 @@ impl pat_visit_mut::Visit for ForceVariableBindings {
             }
         }
     }
+
+    fn visit_field_pat(&mut self, field: &mut syn::FieldPat) -> Result<()> {
+        pat_visit_mut::visit_field_pat(self, field)?;
+
+        if field.colon_token.is_none() {
+            // Field shorthand in a struct pattern - by processing it with
+            // `self.visit_pat_ident`, we have just turned it into an invalid
+            // pattern (e.g., `St { a }` -> `St { a @ _ }`). Expand the
+            // shorthand to make it valid.
+            field.colon_token = Some(syn::token::Colon {
+                spans: [Span::call_site()],
+            });
+        }
+
+        Ok(())
+    }
 }
 
 /// An implementation of [`pat_visit::Visit`] to collect variable bindings,
@@ -377,7 +393,7 @@ macro_rules! define_visit_pat_trait {
         fn visit_pat(..);
         ..
     ) => {
-        use syn::{Pat, PatIdent, spanned::Spanned};
+        use syn::{FieldPat, Pat, PatIdent, spanned::Spanned};
 
         pub trait Visit<$($out_lifetime)*> {
             type Error: From<syn::Error>;
@@ -394,6 +410,13 @@ macro_rules! define_visit_pat_trait {
                 pat: & $($out_lifetime)* $($mut)* PatIdent,
             ) -> Result<(), Self::Error> {
                 visit_pat_ident(self, pat)
+            }
+
+            fn visit_field_pat(
+                &mut self,
+                field: & $($out_lifetime)* $($mut)* FieldPat,
+            ) -> Result<(), Self::Error> {
+                visit_field_pat(self, field)
             }
         }
 
@@ -425,7 +448,7 @@ macro_rules! define_visit_pat_trait {
                 }
                 Pat::Struct(pat) => {
                     for field in pat.fields.$iter() {
-                        visit.visit_pat(& $($mut)* field.pat)?;
+                        visit.visit_field_pat(field)?;
                     }
                     Ok(())
                 }
@@ -458,6 +481,13 @@ macro_rules! define_visit_pat_trait {
                 visit.visit_pat(subpat)?;
             }
             Ok(())
+        }
+
+        pub fn visit_field_pat<'a, V: ?Sized + Visit< $($out_lifetime)* >>(
+            visit: &mut V,
+            field: &'a $($mut)* FieldPat,
+        ) -> Result<(), V::Error> {
+            visit.visit_pat(& $($mut)* field.pat)
         }
     }
 }

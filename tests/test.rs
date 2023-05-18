@@ -183,6 +183,27 @@ fn struct_expr_implicit_map() {
 
 #[test]
 #[allow(unused_variables)]
+fn struct_field_shorthand() {
+    struct A {
+        x: i32,
+    }
+    assert!(matches!(A { x: 42 }, A { x }));
+    assert_eq!(match_ok!(A { x: 42 }, A { x } => x), Some(42));
+    assert_eq!(match_ok!(A { x: 42 }, A { ref x } => x), Some(&42));
+}
+
+#[cfg(feature = "implicit_map")]
+#[test]
+fn struct_field_shorthand_implicit_map() {
+    struct A {
+        x: i32,
+    }
+    assert_eq!(match_ok!(A { x: 42 }, A { x }), Some(42));
+    assert_eq!(match_ok!(A { x: 42 }, A { ref x }), Some(&42));
+}
+
+#[test]
+#[allow(unused_variables)]
 #[allow(clippy::diverging_sub_expression)]
 fn return_in_guard() {
     assert_eq!(try_match!(Some(12), Some(a) if return => a), Ok(42));
