@@ -2,7 +2,7 @@
 name = "try_match"
 version = "0.4.1"
 authors = ["yvt <i@yvt.jp>"]
-edition = "2018"
+edition = "2021"
 license = "MIT OR Apache-2.0"
 rust-version = "1.56"
 readme = "README.md"

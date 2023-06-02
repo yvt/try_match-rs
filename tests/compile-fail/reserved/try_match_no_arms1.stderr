@@ -7,5 +7,5 @@ error: unexpected end of macro invocation
 note: while trying to match meta-variable `$p:pat`
  --> src/lib.rs
   |
-  |     ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? => $out:expr $(,)?) => {
-  |                        ^^^^^^
+  |     ($in:expr, $p:pat $(if $guard:expr)? => $out:expr $(,)?) => {
+  |                ^^^^^^

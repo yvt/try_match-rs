@@ -280,7 +280,7 @@
 /// successful; `Err($in)` otherwise.
 ///
 /// ```rust,ignore
-/// try_match!($( $in:expr )?, $p:pat_multi $( if $guard:expr )? $( => $out:expr )? $( , )?)
+/// try_match!($( $in:expr )?, $p:pat $( if $guard:expr )? $( => $out:expr )? $( , )?)
 /// ```
 ///
 /// `=> $out` can be left out, in which case it's implied based on the number of
@@ -299,17 +299,17 @@
 /// See [the crate-level documentation](crate#basic-usage) for examples.
 #[macro_export]
 macro_rules! try_match {
-    ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? => $out:expr $(,)?) => {
+    ($in:expr, $p:pat $(if $guard:expr)? => $out:expr $(,)?) => {
         match $in {
-            $($p)|+ $(if $guard)? => ::core::result::Result::Ok($out),
+            $p $(if $guard)? => ::core::result::Result::Ok($out),
             in_value => ::core::result::Result::Err(in_value),
         }
     };
 
-    ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? $(,)?) => {
+    ($in:expr, $p:pat $(if $guard:expr)? $(,)?) => {
         $crate::implicit_try_match!(
             ($in),
-            $($p)|+ $(if $guard)?,
+            $p $(if $guard)?,
             { ::core::result::Result::Ok }
             { in_value => ::core::result::Result::Err(in_value) }
         )
@@ -325,7 +325,7 @@ macro_rules! try_match {
 /// successful; `None` otherwise.
 ///
 /// ```rust,ignore
-/// match_ok!($( $in:expr )?, $p:pat_multi $( if $guard:expr )? $( => $out:expr )? $( , )?)
+/// match_ok!($( $in:expr )?, $p:pat $( if $guard:expr )? $( => $out:expr )? $( , )?)
 /// ```
 ///
 /// `=> $out` can be left out, in which case it's implied in the same way as
@@ -337,17 +337,17 @@ macro_rules! try_match {
 /// See [the crate-level documentation](crate#basic-usage) for examples.
 #[macro_export]
 macro_rules! match_ok {
-    ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? => $out:expr $(,)?) => {
+    ($in:expr, $p:pat $(if $guard:expr)? => $out:expr $(,)?) => {
         match $in {
-            $($p)|+ $(if $guard)? => ::core::option::Option::Some($out),
+            $p $(if $guard)? => ::core::option::Option::Some($out),
             _ => ::core::option::Option::None,
         }
     };
 
-    ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? $(,)?) => {
+    ($in:expr, $p:pat $(if $guard:expr)? $(,)?) => {
         $crate::implicit_try_match!(
             ($in),
-            $($p)|+ $(if $guard)?,
+            $p $(if $guard)?,
             { ::core::option::Option::Some }
             { _ => ::core::option::Option::None }
         )
@@ -364,7 +364,7 @@ macro_rules! match_ok {
 /// ```rust,ignore
 /// unwrap_match!(
 ///     $( $in:expr )?,
-///     $p:pat_multi $( if $guard:expr )? $( => $out:expr )?
+///     $p:pat $( if $guard:expr )? $( => $out:expr )?
 ///     // An optional panic message to replace the default one;
 ///     // removes the `$in: Debug` requirement
 ///     $( , $( $( $panic_args:tt )+ $( , )? )? )?
@@ -380,30 +380,30 @@ macro_rules! match_ok {
 /// See [the crate-level documentation](crate#basic-usage) for examples.
 #[macro_export]
 macro_rules! unwrap_match {
-    ($($in:expr)?, $(|)? $($p:pat)|+ $(if $guard:expr)? $( => $out:expr)?) => {
+    ($($in:expr)?, $p:pat $(if $guard:expr)? $( => $out:expr)?) => {
         // Add a trailing comma
-        $crate::unwrap_match!($($in)?, $($p)|+ $(if $guard)? $( => $out)? ,)
+        $crate::unwrap_match!($($in)?, $p $(if $guard)? $( => $out)? ,)
     };
 
-    ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)? => $out:expr, $($panic_arg:tt)*) => {
+    ($in:expr, $p:pat $(if $guard:expr)? => $out:expr, $($panic_arg:tt)*) => {
         match $in {
-            $($p)|+ $(if $guard)? => $out,
+            $p $(if $guard)? => $out,
             ref in_val => $crate::unwrap_failed!(
                 { in_val }
-                { $($p)|+ $(if $guard)? }
+                { $p $(if $guard)? }
                 { $($panic_arg)* }
             ),
         }
     };
 
-    ($in:expr, $(|)? $($p:pat)|+ $(if $guard:expr)?, $($panic_arg:tt)*) => {
+    ($in:expr, $p:pat $(if $guard:expr)?, $($panic_arg:tt)*) => {
         $crate::implicit_try_match!(
             ($in),
-            $($p)|+ $(if $guard)?,
+            $p $(if $guard)?,
             {}
             { ref in_val => $crate::unwrap_failed!(
                 { in_val }
-                { $($p)|+ $(if $guard)? }
+                { $p $(if $guard)? }
                 { $($panic_arg)* }
             ) }
         )
