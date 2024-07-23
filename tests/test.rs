@@ -1,6 +1,6 @@
 extern crate core as abcdefgh;
 extern crate std as ijklmn;
-use try_match::{match_ok, try_match, unwrap_match};
+use try_match::{match_ok, match_or_default, try_match, unwrap_match};
 
 #[test]
 fn input_evaled_only_once() {
@@ -303,4 +303,43 @@ fn unwrap_match_msg1() {
 #[should_panic = "poneyland"]
 fn unwrap_match_msg2() {
     unwrap_match!(42, x if x < 20 => (), "poney{}", "land",);
+}
+
+#[test]
+fn match_or_default_explicit() {
+    assert_eq!(match_or_default!(Ok::<(), ()>(()), Ok(_) => 42), 42);
+    assert_eq!(match_or_default!(Err::<(), ()>(()), Ok(_) => 42), 0);
+}
+
+#[cfg(feature = "implicit_map")]
+#[test]
+fn match_or_default_implicit_unit() {
+    assert_eq!(match_or_default!(Ok::<_, ()>(()), Ok(())), ());
+    assert_eq!(match_or_default!(Err::<(), _>(()), Ok(())), ());
+}
+
+#[cfg(feature = "implicit_map")]
+#[test]
+fn match_or_default_implicit_tuple() {
+    assert_eq!(
+        match_or_default!(Ok::<(i8, i8), (i8, i8)>((1, 2)), Ok((_0, _1))),
+        (1, 2)
+    );
+    assert_eq!(
+        match_or_default!(Err::<(i8, i8), (i8, i8)>((1, 2)), Ok((_0, _1))),
+        (0, 0)
+    );
+}
+
+#[cfg(feature = "implicit_map")]
+#[test]
+fn match_or_default_implicit_struct() {
+    assert_eq!(
+        match_or_default!(Ok::<(i8, i8), (i8, i8)>((1, 2)), Ok((a, b))).b,
+        2
+    );
+    assert_eq!(
+        match_or_default!(Err::<(i8, i8), (i8, i8)>((1, 2)), Ok((a, b))).b,
+        0
+    );
 }

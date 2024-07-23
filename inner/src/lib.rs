@@ -161,7 +161,7 @@ pub fn implicit_try_match_inner(input: TokenStream) -> TokenStream {
                     };
 
                     quote! {{
-                        #[derive(Clone, Copy)]
+                        #[derive(Default, Clone, Copy)]
                         struct #ty_name<#(#ty_params),*> {
                             #(
                                 #idents: #ty_params

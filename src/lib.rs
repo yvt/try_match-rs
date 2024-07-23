@@ -28,6 +28,17 @@
 //! assert_eq!(match_ok!(Var1(42), Var1(x) if x < 20), None);
 //! ```
 //!
+//! [`match_or_default!`] returns a default value on failure:
+//!
+//! ```rust
+//! # use try_match::match_or_default;
+//! # #[derive(Copy, Clone, Debug, PartialEq)]
+//! # enum Enum<T> { Var1(T), Var2 }
+//! # use Enum::{Var1, Var2};
+//! assert_eq!(match_or_default!(Var1(42), Var1(x)), 42);
+//! assert_eq!(match_or_default!(Var1(42), Var1(x) if x < 20), 0);
+//! ```
+//!
 //! [`unwrap_match!`] panics on failure:
 //!
 //! ```rust
@@ -228,19 +239,20 @@
 //! let _: &UncopyValue = try_match!(&array[0], Some(x)).unwrap();
 //! ```
 //!
-//! [`match_ok!`] and [`unwrap_match!`] do not have this issue:
+//! [`match_ok!`], [`match_or_default!`], and [`unwrap_match!`] do not have this
+//! issue:
 //!
 //! ```rust
-//! # use try_match::match_ok;
-//! #[derive(Debug)] struct UncopyValue;
+//! # use try_match::*;
+//! # #[derive(Debug)] struct UncopyValue;
+//! impl Default for &UncopyValue {
+//!     // ...
+//! #     fn default() -> Self { &UncopyValue }
+//! }
+//!
 //! let array = [Some(UncopyValue), None];
 //! let _: &UncopyValue = match_ok!(array[0], Some(ref x)).unwrap();
-//! ```
-//!
-//! ```rust
-//! # use try_match::unwrap_match;
-//! #[derive(Debug)] struct UncopyValue;
-//! let array = [Some(UncopyValue), None];
+//! let _: &UncopyValue = match_or_default!(array[0], Some(ref x));
 //! let _: &UncopyValue = unwrap_match!(array[0], Some(ref x));
 //! ```
 //!
@@ -356,6 +368,44 @@ macro_rules! match_ok {
     // Partial application
     (, $($pattern_and_rest:tt)*) => {
         |scrutinee| $crate::match_ok!(scrutinee, $($pattern_and_rest)*)
+    }
+}
+
+/// Try to match `$in` against a given pattern `$p`. Produces `$out` if
+/// successful; [`Default::default()`] otherwise.
+///
+/// ```rust,ignore
+/// match_or_default!($( $in:expr )?, $p:pat $( if $guard:expr )? $( => $out:expr )? $( , )?)
+/// ```
+///
+/// `=> $out` can be left out, in which case it's implied in the same way as
+/// [`try_match!`].
+///
+/// `$in` can be left out to produce a closure ([partial
+/// application](crate#partial-application)).
+///
+/// See [the crate-level documentation](crate#basic-usage) for examples.
+#[macro_export]
+macro_rules! match_or_default {
+    ($in:expr, $p:pat $(if $guard:expr)? => $out:expr $(,)?) => {
+        match $in {
+            $p $(if $guard)? => $out,
+            _ => ::core::default::Default::default(),
+        }
+    };
+
+    ($in:expr, $p:pat $(if $guard:expr)? $(,)?) => {
+        $crate::implicit_try_match!(
+            ($in),
+            $p $(if $guard)?,
+            { }
+            { _ => ::core::default::Default::default() }
+        )
+    };
+
+    // Partial application
+    (, $($pattern_and_rest:tt)*) => {
+        |scrutinee| $crate::match_or_default!(scrutinee, $($pattern_and_rest)*)
     }
 }
 

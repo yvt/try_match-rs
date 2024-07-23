@@ -25,6 +25,10 @@ assert_eq!(try_match!(Var1(42), Var1(x) if x < 20), Err(Var1(42)));
 assert_eq!(match_ok!(Var1(42), Var1(x)), Some(42));
 assert_eq!(match_ok!(Var1(42), Var1(x) if x < 20), None);
 
+// `match_or_default!` returns a default value on failure
+assert_eq!(match_or_default!(Var1(42), Var1(x)), 42);
+assert_eq!(match_or_default!(Var1(42), Var1(x) if x < 20), 0);
+
 // `unwrap_match!` panics on failure:
 assert_eq!(unwrap_match!(Var1(42), Var1(x)), 42);
 unwrap_match!(Var1(42), Var1(x) if x < 20); // will panic
