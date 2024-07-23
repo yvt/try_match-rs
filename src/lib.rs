@@ -148,7 +148,7 @@
 //! assert_eq!(filtered, Err(&Var2));
 //! ```
 //!
-//! *Caveat:* Since this mode is implemented by a closure,
+//! *Note:* Since this mode is implemented by a closure,
 //! [the default binding mode][] ([RFC 2005][]), ownership, and control flow
 //! may work differently.
 //!
