@@ -1,4 +1,4 @@
-//! Provides expression macros to match a pattern on a given expression.
+//! Fallible pattern matching with a function-like syntax
 //!
 //! # Basic Usage
 //!

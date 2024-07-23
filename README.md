@@ -2,7 +2,7 @@
 
 [<img src="https://docs.rs/try_match/badge.svg" alt="docs.rs">](https://docs.rs/try_match/)
 
-Provides expression macros to match a pattern on a given expression.
+Fallible pattern matching with a function-like syntax
 
 ## Basic Usage
 
