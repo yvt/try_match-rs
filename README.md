@@ -19,19 +19,26 @@ use Enum::{Var1, Var2};
 // `try_match!` returns `Result`: `Ok(bindings)` on success or
 // `Err(input_value)` otherwise
 assert_eq!(try_match!(Var1(42), Var1(x)), Ok(42));
-assert_eq!(try_match!(Var1(42), Var1(x) if x < 20), Err(Var1(42)));
+assert_eq!(try_match!(Var2,     Var1(x)), Err(Var2));
 
 // `match_ok!` returns `Option`
 assert_eq!(match_ok!(Var1(42), Var1(x)), Some(42));
-assert_eq!(match_ok!(Var1(42), Var1(x) if x < 20), None);
+assert_eq!(match_ok!(Var2,     Var1(x)), None);
 
 // `match_or_default!` returns a default value on failure
 assert_eq!(match_or_default!(Var1(42), Var1(x)), 42);
-assert_eq!(match_or_default!(Var1(42), Var1(x) if x < 20), 0);
+assert_eq!(match_or_default!(Var2,     Var1(x)), 0);
 
 // `unwrap_match!` panics on failure:
 assert_eq!(unwrap_match!(Var1(42), Var1(x)), 42);
-unwrap_match!(Var1(42), Var1(x) if x < 20); // will panic
+        /* unwrap_match!(Var2,     Var1(x)); */ // this will panic
+```
+
+Match guards (`if <expr>`) are supported:
+
+```rust
+assert_eq!(match_ok!(Var1(42), Var1(x)),           Some(42));
+assert_eq!(match_ok!(Var1(42), Var1(x) if x < 20), None);
 ```
 
 ### Bindings
