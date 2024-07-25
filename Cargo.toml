@@ -22,7 +22,7 @@ std = []
 _doc_cfg = []
 
 [dependencies]
-try_match_inner = { version = "0.5.0", path = "inner", optional = true }
+try_match_inner = { version = "0.5.2", path = "inner", optional = true }
 
 [workspace]
 
