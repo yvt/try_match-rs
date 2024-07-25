@@ -12,26 +12,26 @@ Fallible pattern matching with a function-like syntax
 use try_match::{try_match, match_ok, unwrap_match};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-enum Enum<T> { Var1(T), Var2 }
+enum Enum { Var0, Var1(i32), Var2(i32, i32) }
 
-use Enum::{Var1, Var2};
+use Enum::*;
 
 // `try_match!` returns `Result`: `Ok(bindings)` on success or
 // `Err(input_value)` otherwise
 assert_eq!(try_match!(Var1(42), Var1(x)), Ok(42));
-assert_eq!(try_match!(Var2,     Var1(x)), Err(Var2));
+assert_eq!(try_match!(Var0,     Var1(x)), Err(Var0));
 
 // `match_ok!` returns `Option`
 assert_eq!(match_ok!(Var1(42), Var1(x)), Some(42));
-assert_eq!(match_ok!(Var2,     Var1(x)), None);
+assert_eq!(match_ok!(Var0,     Var1(x)), None);
 
 // `match_or_default!` returns a default value on failure
 assert_eq!(match_or_default!(Var1(42), Var1(x)), 42);
-assert_eq!(match_or_default!(Var2,     Var1(x)), 0);
+assert_eq!(match_or_default!(Var0,     Var1(x)), 0);
 
 // `unwrap_match!` panics on failure:
 assert_eq!(unwrap_match!(Var1(42), Var1(x)), 42);
-        /* unwrap_match!(Var2,     Var1(x)); */ // this will panic
+        /* unwrap_match!(Var0,     Var1(x)); */ // this will panic
 ```
 
 Match guards (`if <expr>`) are supported:
@@ -51,24 +51,24 @@ assert_eq!(unwrap_match!(Var1(42), Var1(_)), ());
 assert_eq!(unwrap_match!(Var1(42), Var1(x)), 42);
 
 // ... an anonymous struct if there are multiple bindings
-let vars = unwrap_match!(Var1((12, 34)), Var1((a, b)));
+let vars = unwrap_match!(Var2(12, 34), Var2(a, b));
 assert_eq!((vars.a, vars.b), (12, 34));
 
 // ... or a tuple if the binding names are numeric
-let (a, b) = unwrap_match!(Var1((12, 34)), Var1((_0, _1)));
+let (a, b) = unwrap_match!(Var2(12, 34), Var2(_0, _1));
 assert_eq!((a, b), (12, 34));
 
 // An optional `=>` clause specifies an explicit mapping
-assert_eq!(unwrap_match!(Var1(42),    Var1(x) => x + 1), 43);
-assert_eq!(unwrap_match!(Var2::<u32>, Var2    => "yay"), "yay");
+assert_eq!(unwrap_match!(Var1(42), Var1(x) => x + 1), 43);
+assert_eq!(unwrap_match!(Var0,     Var0    => "yay"), "yay");
 ```
 
 ### Partial Application
 
 ```rust
 // Omit the scrutinee expression to produce a closure
-let _:                  Option<i32> = match_ok!(Var1(42), Var1(x));
-let _: fn(Enum<i32>) -> Option<i32> = match_ok!(        , Var1(x));
+let _:             Option<i32> = match_ok!(Var1(42), Var1(x));
+let _: fn(Enum) -> Option<i32> = match_ok!(        , Var1(x));
 ```
 
 ## Applications
@@ -76,7 +76,7 @@ let _: fn(Enum<i32>) -> Option<i32> = match_ok!(        , Var1(x));
 ### `Iterator::filter_map`
 
 ```rust
-let array = [Var1(42), Var2, Var1(10)];
+let array = [Var1(42), Var0, Var1(10)];
 let filtered: Vec<_> = array
     .iter()
     .filter_map(match_ok!(, &Var1(_0) if _0 > 20))
@@ -87,30 +87,30 @@ assert_eq!(filtered, [42]);
 ### `Iterator::map` + Fallible `Iterator::collect`
 
 ```rust
-let array = [Var1(42), Var2, Var1(10)];
+let array = [Var1(42), Var0, Var1(10)];
 let filtered: Result<Vec<_>, _> = array
     .iter()
     .map(try_match!(, &Var1(_0) if _0 > 20))
     .collect();
 
-// `Var2` is the first value that doesn't match
-assert_eq!(filtered, Err(&Var2));
+// `Var0` is the first value that doesn't match
+assert_eq!(filtered, Err(&Var0));
 ```
 
 ### Extract Variants
 
 ```rust
-impl<T> Enum<T> {
-    fn var1(&self) -> Option<&T> {
+impl Enum {
+    fn var1(&self) -> Option<&i32> {
         match_ok!(self, Var1(_0))
     }
 
     fn is_var2(&self) -> bool {
-        matches!(self, Var2)
+        matches!(self, Var0)
     }
 }
 
-let enums = [Var1(42), Var2];
+let enums = [Var1(42), Var0];
 assert_eq!(enums[0].var1(), Some(&42));
 assert_eq!(enums[1].var1(), None);
 
@@ -121,16 +121,16 @@ assert!(enums[1].is_var2());
 ### Expect Certain Variants
 
 ```rust
-fn this_fn_expects_var1(foo: &Enum<[u8; 4]>) {
-    let (i0, i1) = unwrap_match!(foo, &Var1([_0, _, _, _1]));
+fn this_fn_expects_var2(foo: &Enum) {
+    let i = unwrap_match!(foo, &Var2(42, _0));
 
     // Alternatively, you could use let-else (stabilized in Rust 1.65.0):
-    // let &Var1([i0, _, _, i1]) = foo else { panic!("{foo:?}") };
+    // let &Var2(42, i) = foo else { panic!("{foo:?}") };
 
-    assert_eq!((i0, i1), (42, 45));
+    assert_eq!(i, 84);
 }
 
-this_fn_expects_var1(&Var1([42, 43, 44, 45]));
+this_fn_expects_var2(&Var2(42, 84));
 ```
 
 ## Related Works
