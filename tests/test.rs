@@ -313,9 +313,10 @@ fn match_or_default_explicit() {
 
 #[cfg(feature = "implicit_map")]
 #[test]
+#[allow(clippy::let_unit_value)]
 fn match_or_default_implicit_unit() {
-    assert_eq!(match_or_default!(Ok::<_, ()>(()), Ok(())), ());
-    assert_eq!(match_or_default!(Err::<(), _>(()), Ok(())), ());
+    () = match_or_default!(Ok::<_, ()>(()), Ok(()));
+    () = match_or_default!(Err::<(), _>(()), Ok(()));
 }
 
 #[cfg(feature = "implicit_map")]
